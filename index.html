@@ -7797,19 +7797,23 @@ function juzOfAyah(s,a){
         $(`#mur${i}-juzTo`).value   = jt!==undefined ? String(jt) : '';
 
         // Prefill nilai dari dataset ATAU record server (kalau ada)
+// Prefill nilai dari dataset ATAU record server (kalau ada, > 0)
 const scFromDs  = ds[`score${i}`];
 const scFromRec = fromRec(i, 'score');
-const scVal     = (scFromDs !== undefined && scFromDs !== '') ? scFromDs :
-                  (scFromRec !== undefined && scFromRec !== '') ? scFromRec : '';
 
-if (scVal !== '') {
-  const s = Math.max(0, Math.min(100, parseInt(scVal, 10) || 0));
+// normalisasi ke number
+const scCand = (scFromDs !== undefined && scFromDs !== '') ? Number(scFromDs)
+             : (scFromRec !== undefined && scFromRec !== '') ? Number(scFromRec)
+             : NaN;
+
+// HANYA prefill jika angka valid DAN > 0
+if (Number.isFinite(scCand) && scCand > 0) {
+  const s = Math.max(0, Math.min(100, Math.floor(scCand)));
   const p = getPredikat(s);
   const inp = $(`#mur${i}-score`);
   if (inp) inp.value = String(s);
   $(`#mur${i}-predikatBadge`).textContent = `${p.text} (${p.huruf})`;
 
-  // simpan ke state + dataset supaya tidak “terhapus” saat renderSession
   murState[i].score  = s;
   murState[i].pText  = p.text;
   murState[i].pHuruf = p.huruf;
@@ -7994,7 +7998,13 @@ if (scVal !== '') {
           if (ses.jFrom != null && ses.jFrom !== '') cell.dataset[`jfrom${i}`] = String(ses.jFrom); else delete cell.dataset[`jfrom${i}`];
           if (ses.jTo   != null && ses.jTo   !== '') cell.dataset[`jto${i}`]   = String(ses.jTo);   else delete cell.dataset[`jto${i}`];
           cell.dataset[`juz${i}`] = num(ses.juzVal || 0).toFixed(2);
-          if (ses.score  != null) cell.dataset[`score${i}`] = String(ses.score); else delete cell.dataset[`score${i}`];
+
+const sNum = Number(ses.score);
+if (Number.isFinite(sNum) && sNum > 0) {
+  cell.dataset[`score${i}`] = String(Math.floor(sNum));
+} else {
+  delete cell.dataset[`score${i}`];
+}
           if (ses.pText  != null) cell.dataset[`ptext${i}`] = String(ses.pText); else delete cell.dataset[`ptext${i}`];
           if (ses.pHuruf != null) cell.dataset[`phuruf${i}`]= String(ses.pHuruf); else delete cell.dataset[`phuruf${i}`];
         }
