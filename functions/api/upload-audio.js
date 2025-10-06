@@ -2,7 +2,7 @@
 // POST /api/uploadAudio
 // Body JSON: { "fileName": "xx.mp3", "base64": "data:audio/mp3;base64,...", "folder": "audio" }
 // ENV: GITHUB_TOKEN (atau fallback MTQ_TOKEN)
-// Repo target: muqoddammtb/server (branch: main)
+// Repo target: raportahfiz/server (branch: main)
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -10,7 +10,7 @@ const CORS = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 
-const OWNER_REPO = "muqoddammtb/server";
+const OWNER_REPO = "raportahfiz/server";
 const BRANCH = "main";
 
 const ghHeaders = (token) => ({
