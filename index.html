@@ -4109,9 +4109,18 @@ tanggalInput.addEventListener("change", loadSantriData);
 // A. LOAD SANTRI DATA
 // ============================
 // ====== SIMPAN DATA MUTABAAH ======
-// ====== SIMPAN DATA MUTABAAH ====== 
 async function simpanDataMutabaah(saveBtn){
   const rows  = document.querySelectorAll('#santri-table tbody tr');
+
+  // --- helper predikat (duplikasi ringan dari modul murajaah) ---
+  function getPredikatLocal(score){
+    const s = Math.max(0, Math.min(100, Number(score)||0));
+    if (s <= 59)  return { text:'ROSIB',         huruf:'D'  };
+    if (s <= 69)  return { text:'MAQBUL',        huruf:'C'  };
+    if (s <= 79)  return { text:'JAYYID',        huruf:'B'  };
+    if (s <= 89)  return { text:'JAYYID JIDDAN', huruf:'A'  };
+    return           { text:'MUMTAZ',           huruf:'A+' };
+  }
 
   function resolveKelas(){
     const byWin=(window.kelasSelect?.value)||'';
@@ -4204,16 +4213,16 @@ async function simpanDataMutabaah(saveBtn){
     return { absensiItems, absensiTarget, absensiChecked, absensiPercent, absensi6, absensiExpanded, absensiExpandedStr };
   }
 
-  // ==== Murajaah 3 sesi (REVISI: anti-fallback saat wipe, total 0) ====
+  // ==== Murajaah 3 sesi (tetap) ====
   function getMurFromRow(row, existing={}){
     const cell = row.querySelector('.murajaah-cell');
     const out  = { sessions: [], total: null };
 
-    const num = (v, fb=0)=>{ const n=parseNum(v); return Number.isFinite(n)?n:fb; };
     function pick(dsKey, fallback){
       const v = cell?.dataset?.[dsKey];
       return (v!==undefined && v!==null && String(v)!=='') ? v : fallback;
     }
+    function num(v, fb=0){ const n=parseNum(v); return Number.isFinite(n)?n:fb; }
 
     for (let i=1;i<=3;i++){
       const sF = pick(`sf${i}`,  undefined);
@@ -4224,38 +4233,54 @@ async function simpanDataMutabaah(saveBtn){
       const pT = pick(`pt${i}`,  undefined);
       const jF = pick(`jfrom${i}`, undefined);
       const jT = pick(`jto${i}`,   undefined);
-      const jzRaw = pick(`juz${i}`,   undefined);
+      const jz = pick(`juz${i}`,   undefined);
       const sc = pick(`score${i}`, undefined);
       const pt = pick(`ptext${i}`, undefined);
       const ph = pick(`phuruf${i}`,undefined);
 
       const ex = existing || {};
       const exSes = (Array.isArray(ex.murSessions) && ex.murSessions[i-1]) ? ex.murSessions[i-1] : {};
-
-      // Wipe logic: jika jzRaw ada dan bernilai 0 -> HAPUS from/to/pages (tanpa fallback)
-      const wiped = (jzRaw !== undefined) && (num(jzRaw) === 0);
-
       const sess = {
-        from:  (sF||aF) ? `${sF||''}:${aF||''}` : (wiped ? "" : (ex[`murFrom${i}`] ?? exSes.from ?? "")),
-        to:    (sT||aT) ? `${sT||''}:${aT||''}` : (wiped ? "" : (ex[`murTo${i}`]   ?? exSes.to   ?? "")),
-        pages: (pF||pT) ? `${pF||''}-${pT||''}` : (wiped ? "" : (ex[`murPages${i}`]?? exSes.pages?? "")),
-        jFrom: (jF !== undefined) ? (jF===""? null : Number(jF)) : (ex[`jFrom${i}`] ?? exSes.jFrom ?? null),
-        jTo:   (jT !== undefined) ? (jT===""? null : Number(jT)) : (ex[`jTo${i}`]   ?? exSes.jTo   ?? null),
-        juz:   (jzRaw!==undefined) ? num(jzRaw) : num(ex[`juzmur${i}`] ?? ex[`juzSesi${i}`] ?? exSes.juz ?? 0),
-        score: num(sc ?? (ex[`murScore${i}`] ?? exSes.score ?? 0)),
-        predikatText:  (pt !== undefined) ? pt : (ex[`murPredText${i}`]  ?? exSes.predikatText  ?? ""),
-        predikatHuruf: (ph !== undefined) ? ph : (ex[`murPredHuruf${i}`] ?? exSes.predikatHuruf ?? "")
+        from:  (sF||aF) ? `${sF||''}:${aF||''}` : (ex[`murFrom${i}`] ?? exSes.from ?? ''),
+        to:    (sT||aT) ? `${sT||''}:${aT||''}` : (ex[`murTo${i}`]   ?? exSes.to   ?? ''),
+        pages: (pF||pT) ? `${pF||''}-${pT||''}` : (ex[`murPages${i}`]?? exSes.pages?? ''),
+        jFrom: jF ?? (ex[`jFrom${i}`] ?? exSes.jFrom ?? null),
+        jTo:   jT ?? (ex[`jTo${i}`]   ?? exSes.jTo   ?? null),
+        juz:   (jz!==undefined) ? num(jz) : num(ex[`juzmur${i}`] ?? ex[`juzSesi${i}`] ?? exSes.juz ?? 0),
+        score: (sc!==undefined) ? num(sc) : num(ex[`murScore${i}`] ?? exSes.score ?? 0),
+        predikatText:  (pt!==undefined) ? pt : (ex[`murPredText${i}`]  ?? exSes.predikatText ?? ''),
+        predikatHuruf: (ph!==undefined) ? ph : (ex[`murPredHuruf${i}`] ?? exSes.predikatHuruf ?? '')
       };
       out.sessions.push(sess);
     }
 
     const sum = out.sessions.reduce((a,s)=>a + (Number(s.juz)||0), 0);
-    out.total = +sum.toFixed(2); // 0.00 jika semuanya 0
+    out.total = sum>0 ? +sum.toFixed(2) : null;
 
     return out;
   }
 
   if (saveBtn){ saveBtn.disabled=true; saveBtn.dataset._old=saveBtn.textContent; saveBtn.textContent='⏳ Menyimpan...'; }
+
+  // --- SYNC INPUT→DATASET (penting agar skor ikut tersimpan walau event 'input' belum sempat menembak)
+  try{
+    if (window.currentRowEl){
+      const cell = window.currentRowEl.querySelector('.murajaah-cell');
+      if (cell){
+        for (let i=1;i<=3;i++){
+          const el = document.getElementById(`mur${i}-score`);
+          const raw = el ? String(el.value||'').trim() : '';
+          if (raw!==''){
+            const sc = Math.max(0, Math.min(100, parseInt(raw,10) || 0));
+            const p  = getPredikatLocal(sc);
+            cell.dataset[`score${i}`] = String(sc);
+            cell.dataset[`ptext${i}`] = p.text;
+            cell.dataset[`phuruf${i}`]= p.huruf;
+          }
+        }
+      }
+    }
+  }catch(_){}
 
   try{
     const groupByTanggal = new Map();
@@ -4329,51 +4354,49 @@ async function simpanDataMutabaah(saveBtn){
 
           halaman, totalHalaman, juzTerbaca, keterangan,
 
-          // PAKAI ?? agar "" tidak difallback ke data lama
           murSessions: mur.sessions.map(s => ({
-            from:  s.from  ?? "",
-            to:    s.to    ?? "",
-            pages: s.pages ?? "",
+            from: s.from || "",
+            to:   s.to   || "",
+            pages: s.pages || "",
             jFrom: (s.jFrom!==undefined && s.jFrom!=="") ? Number(s.jFrom) : null,
             jTo:   (s.jTo  !==undefined && s.jTo  !=="") ? Number(s.jTo)   : null,
             juz:   Number((Number(s.juz)||0).toFixed(2)),
             score: Number(s.score||0),
-            predikatText:  s.predikatText  ?? "",
-            predikatHuruf: s.predikatHuruf ?? ""
+            predikatText:  s.predikatText || "",
+            predikatHuruf: s.predikatHuruf|| ""
           })),
 
-          // legacy mirror (PAKAI ??, bukan ||)
-          murFrom1:  mur.sessions[0]?.from  ?? existing?.murFrom1  ?? "",
-          murTo1:    mur.sessions[0]?.to    ?? existing?.murTo1    ?? "",
-          murPages1: mur.sessions[0]?.pages ?? existing?.murPages1 ?? "",
-          jFrom1:    (mur.sessions[0]?.jFrom ?? existing?.jFrom1 ?? null),
-          jTo1:      (mur.sessions[0]?.jTo   ?? existing?.jTo1   ?? null),
-          juzmur1:   Number((mur.sessions[0]?.juz ?? existing?.juzmur1 ?? 0).toFixed?.(2) ?? 0),
+          // legacy mirror
+          murFrom1: mur.sessions[0]?.from || existing?.murFrom1 || "",
+          murTo1:   mur.sessions[0]?.to   || existing?.murTo1   || "",
+          murPages1: mur.sessions[0]?.pages || existing?.murPages1 || "",
+          jFrom1: (mur.sessions[0]?.jFrom ?? existing?.jFrom1 ?? null),
+          jTo1:   (mur.sessions[0]?.jTo   ?? existing?.jTo1   ?? null),
+          juzmur1: Number((mur.sessions[0]?.juz ?? existing?.juzmur1 ?? 0).toFixed?.(2) ?? 0),
           murScore1: Number(mur.sessions[0]?.score ?? existing?.murScore1 ?? 0),
           murPredText1:  mur.sessions[0]?.predikatText  ?? existing?.murPredText1  ?? "",
           murPredHuruf1: mur.sessions[0]?.predikatHuruf ?? existing?.murPredHuruf1 ?? "",
 
-          murFrom2:  mur.sessions[1]?.from  ?? existing?.murFrom2  ?? "",
-          murTo2:    mur.sessions[1]?.to    ?? existing?.murTo2    ?? "",
-          murPages2: mur.sessions[1]?.pages ?? existing?.murPages2 ?? "",
-          jFrom2:    (mur.sessions[1]?.jFrom ?? existing?.jFrom2 ?? null),
-          jTo2:      (mur.sessions[1]?.jTo   ?? existing?.jTo2   ?? null),
-          juzmur2:   Number((mur.sessions[1]?.juz ?? existing?.juzmur2 ?? 0).toFixed?.(2) ?? 0),
+          murFrom2: mur.sessions[1]?.from || existing?.murFrom2 || "",
+          murTo2:   mur.sessions[1]?.to   || existing?.murTo2   || "",
+          murPages2: mur.sessions[1]?.pages || existing?.murPages2 || "",
+          jFrom2: (mur.sessions[1]?.jFrom ?? existing?.jFrom2 ?? null),
+          jTo2:   (mur.sessions[1]?.jTo   ?? existing?.jTo2   ?? null),
+          juzmur2: Number((mur.sessions[1]?.juz ?? existing?.juzmur2 ?? 0).toFixed?.(2) ?? 0),
           murScore2: Number(mur.sessions[1]?.score ?? existing?.murScore2 ?? 0),
           murPredText2:  mur.sessions[1]?.predikatText  ?? existing?.murPredText2  ?? "",
           murPredHuruf2: mur.sessions[1]?.predikatHuruf ?? existing?.murPredHuruf2 ?? "",
 
-          murFrom3:  mur.sessions[2]?.from  ?? existing?.murFrom3  ?? "",
-          murTo3:    mur.sessions[2]?.to    ?? existing?.murTo3    ?? "",
-          murPages3: mur.sessions[2]?.pages ?? existing?.murPages3 ?? "",
-          jFrom3:    (mur.sessions[2]?.jFrom ?? existing?.jFrom3 ?? null),
-          jTo3:      (mur.sessions[2]?.jTo   ?? existing?.jTo3   ?? null),
-          juzmur3:   Number((mur.sessions[2]?.juz ?? existing?.juzmur3 ?? 0).toFixed?.(2) ?? 0),
+          murFrom3: mur.sessions[2]?.from || existing?.murFrom3 || "",
+          murTo3:   mur.sessions[2]?.to   || existing?.murTo3   || "",
+          murPages3: mur.sessions[2]?.pages || existing?.murPages3 || "",
+          jFrom3: (mur.sessions[2]?.jFrom ?? existing?.jFrom3 ?? null),
+          jTo3:   (mur.sessions[2]?.jTo   ?? existing?.jTo3   ?? null),
+          juzmur3: Number((mur.sessions[2]?.juz ?? existing?.juzmur3 ?? 0).toFixed?.(2) ?? 0),
           murScore3: Number(mur.sessions[2]?.score ?? existing?.murScore3 ?? 0),
           murPredText3:  mur.sessions[2]?.predikatText  ?? existing?.murPredText3  ?? "",
           murPredHuruf3: mur.sessions[2]?.predikatHuruf ?? existing?.murPredHuruf3 ?? "",
 
-          // total murajaah: 0.00 saat reset
           juzmurajaah: (mur.total!=null ? mur.total : Number(parseNum(existing?.juzmurajaah||0).toFixed?.(2) ?? 0)),
 
           marks: (row.markData && typeof row.markData === 'object') ? row.markData : (existing?.marks || { audio: [] })
