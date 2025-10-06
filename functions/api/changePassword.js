@@ -2,7 +2,7 @@
 // Cloudflare Pages Functions (ESM). Endpoint: /api/changePassword
 
 // ====== Konfigurasi (bisa dioverride lewat Environment Variables) ======
-const DEFAULT_REPO = "muqoddammtb/server"; // repo owner/name
+const DEFAULT_REPO = "raportahfiz/server"; // repo owner/name
 const DEFAULT_PATH = "user.json";              // path file di repo
 
 // ====== Util base64 (tanpa Buffer) ======
