@@ -4215,11 +4215,7 @@ async function simpanDataMutabaah(saveBtn){
       return (v!==undefined && v!==null && String(v)!=='') ? v : fallback;
     }
 
-	 const scoreOrNull = (v) => {
-  const n = (v===null || v===undefined || v==='') ? null : Number(v);
-  return (Number.isFinite(n) && n > 0) ? n : null;
-};
-
+	 
     for (let i=1;i<=3;i++){
       const sF = pick(`sf${i}`,  undefined);
       const aF = pick(`af${i}`,  undefined);
