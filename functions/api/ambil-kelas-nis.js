@@ -1,7 +1,7 @@
 // functions/api/ambil-kelas-nis.js
 // Endpoint: GET /api/ambil-kelas-nis?kelas=Nama (menerima 01, kelas_01, kelas_01.json, kelas-01)
 
-const DEFAULT_REPO   = "muqoddammtb/server";
+const DEFAULT_REPO   = "raportahfiz/server";
 const DEFAULT_BRANCH = "main";
 
 const dec = new TextDecoder();
