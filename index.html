@@ -4215,7 +4215,6 @@ async function simpanDataMutabaah(saveBtn){
       return (v!==undefined && v!==null && String(v)!=='') ? v : fallback;
     }
 
-	 
     for (let i=1;i<=3;i++){
       const sF = pick(`sf${i}`,  undefined);
       const aF = pick(`af${i}`,  undefined);
@@ -4330,11 +4329,6 @@ async function simpanDataMutabaah(saveBtn){
 
           halaman, totalHalaman, juzTerbaca, keterangan,
 
-			const toScore = (v) => {
-  const n = (v===null || v===undefined || v==='') ? null : Number(v);
-  return (Number.isFinite(n) && n > 0) ? n : null;
-};		
-	 
           // PAKAI ?? agar "" tidak difallback ke data lama
           murSessions: mur.sessions.map(s => ({
             from:  s.from  ?? "",
@@ -4343,6 +4337,7 @@ async function simpanDataMutabaah(saveBtn){
             jFrom: (s.jFrom!==undefined && s.jFrom!=="") ? Number(s.jFrom) : null,
             jTo:   (s.jTo  !==undefined && s.jTo  !=="") ? Number(s.jTo)   : null,
             juz:   Number((Number(s.juz)||0).toFixed(2)),
+            score: Number(s.score||0),
             predikatText:  s.predikatText  ?? "",
             predikatHuruf: s.predikatHuruf ?? ""
           })),
@@ -4354,7 +4349,7 @@ async function simpanDataMutabaah(saveBtn){
           jFrom1:    (mur.sessions[0]?.jFrom ?? existing?.jFrom1 ?? null),
           jTo1:      (mur.sessions[0]?.jTo   ?? existing?.jTo1   ?? null),
           juzmur1:   Number((mur.sessions[0]?.juz ?? existing?.juzmur1 ?? 0).toFixed?.(2) ?? 0),
-          murScore1: toScore(mur.sessions[0]?.score ?? existing?.murScore1),
+          murScore1: Number(mur.sessions[0]?.score ?? existing?.murScore1 ?? 0),
           murPredText1:  mur.sessions[0]?.predikatText  ?? existing?.murPredText1  ?? "",
           murPredHuruf1: mur.sessions[0]?.predikatHuruf ?? existing?.murPredHuruf1 ?? "",
 
@@ -7347,22 +7342,22 @@ function juzOfAyah(s,a){
     const inp = $(`#mur${idx}-score`);
     if (!inp) return;
     const raw = String(inp.value ?? '');
-if (raw.trim() === '' || Number(raw) <= 0) {
-  $(`#mur${idx}-predikatBadge`).textContent = '–';
-  murState[idx].score  = null;
-  murState[idx].pText  = '';
-  murState[idx].pHuruf = '';
-  if (currentRowEl){
-    const cell = currentRowEl.querySelector('.murajaah-cell');
-    if (cell){
-      delete cell.dataset[`score${idx}`];
-      delete cell.dataset[`ptext${idx}`];
-      delete cell.dataset[`phuruf${idx}`];
-    }
-  }
-  return;
-}
 
+    if (raw.trim() === '') {
+      $(`#mur${idx}-predikatBadge`).textContent = '–';
+      murState[idx].score  = null;
+      murState[idx].pText  = '';
+      murState[idx].pHuruf = '';
+      if (currentRowEl){
+        const cell = currentRowEl.querySelector('.murajaah-cell');
+        if (cell){
+          delete cell.dataset[`score${idx}`];
+          delete cell.dataset[`ptext${idx}`];
+          delete cell.dataset[`phuruf${idx}`];
+        }
+      }
+      return;
+    }
 
     const sc = Math.max(0, Math.min(100, parseInt(raw, 10) || 0));
     const p  = getPredikat(sc);
@@ -7999,6 +7994,9 @@ if (scVal !== '') {
           if (ses.jFrom != null && ses.jFrom !== '') cell.dataset[`jfrom${i}`] = String(ses.jFrom); else delete cell.dataset[`jfrom${i}`];
           if (ses.jTo   != null && ses.jTo   !== '') cell.dataset[`jto${i}`]   = String(ses.jTo);   else delete cell.dataset[`jto${i}`];
           cell.dataset[`juz${i}`] = num(ses.juzVal || 0).toFixed(2);
+          if (ses.score  != null) cell.dataset[`score${i}`] = String(ses.score); else delete cell.dataset[`score${i}`];
+          if (ses.pText  != null) cell.dataset[`ptext${i}`] = String(ses.pText); else delete cell.dataset[`ptext${i}`];
+          if (ses.pHuruf != null) cell.dataset[`phuruf${i}`]= String(ses.pHuruf); else delete cell.dataset[`phuruf${i}`];
         }
       });
     }
