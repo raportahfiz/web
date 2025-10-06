@@ -8082,6 +8082,25 @@ if (Number.isFinite(sNum) && sNum > 0) {
       }
     }
 
+	  // --- setelah kosongkan UI & state, isi skor=0 dan sinkronkan UI+dataset
+const scoreEl = document.querySelector(`#mur${idx}-score`);
+if (scoreEl) {
+  scoreEl.value = '0';
+  // trigger listener 'input' yang sudah ada → setPredikatUI(idx) + render
+  scoreEl.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+// agar tersimpan juga ke dataset kalau modal terbuka
+if (window.currentRowEl){
+  const cell = window.currentRowEl.querySelector('.murajaah-cell');
+  if (cell){
+    cell.dataset[`score${idx}`] = '0';
+    // opsional: langsung set label predikat sesuai 0 (ROSIB)
+    cell.dataset[`ptext${idx}`]  = getPredikat(0).text;
+    cell.dataset[`phuruf${idx}`] = getPredikat(0).huruf;
+  }
+}
+
     // Rekap total
     [1,2,3].forEach(renderSession);
     const g = (murState[1]?.total||0)+(murState[2]?.total||0)+(murState[3]?.total||0);
