@@ -7999,16 +7999,6 @@ if (scVal !== '') {
           if (ses.jFrom != null && ses.jFrom !== '') cell.dataset[`jfrom${i}`] = String(ses.jFrom); else delete cell.dataset[`jfrom${i}`];
           if (ses.jTo   != null && ses.jTo   !== '') cell.dataset[`jto${i}`]   = String(ses.jTo);   else delete cell.dataset[`jto${i}`];
           cell.dataset[`juz${i}`] = num(ses.juzVal || 0).toFixed(2);
-          const sNum = (ses.score === '' || ses.score === null || ses.score === undefined) ? null : Number(ses.score);
-if (sNum !== null && Number.isFinite(sNum) && sNum > 0) {
-  cell.dataset[`score${i}`]  = String(sNum);
-  if (ses.pText  != null) cell.dataset[`ptext${i}`]  = String(ses.pText);  else delete cell.dataset[`ptext${i}`];
-  if (ses.pHuruf != null) cell.dataset[`phuruf${i}`] = String(ses.pHuruf); else delete cell.dataset[`phuruf${i}`];
-} else {
-  delete cell.dataset[`score${i}`];
-  delete cell.dataset[`ptext${i}`];
-  delete cell.dataset[`phuruf${i}`];
-}
         }
       });
     }
