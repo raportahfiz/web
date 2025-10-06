@@ -7266,7 +7266,7 @@ function juzOfAyah(s,a){
     const name = (tr?.children?.[1]?.childNodes?.[0]?.textContent || tr?.children?.[1]?.textContent || '').trim().toLowerCase();
     return nis || id || name || 'unknown';
   }
-  function _wipeKey(tr, idx){ return `${_kelasNow()}|${_tanggalOfRow(tr)}|${_rowKey(tr)}|${idx}`; }
+  function _wipeKey(tr, idx){ return `${_kelasNow()}|${_rowKey(tr)}|${idx}`; }
   function wipeHas(tr, idx){ const db=_wipeDB(); return !!db[_wipeKey(tr,idx)]; }
   function wipeAdd(tr, idx){ const db=_wipeDB(); db[_wipeKey(tr,idx)]=1; _wipeDBSet(db); }
   function wipeClear(tr, idx){ const db=_wipeDB(); const k=_wipeKey(tr,idx); if (k in db){ delete db[k]; _wipeDBSet(db); } }
@@ -7529,7 +7529,15 @@ function juzOfAyah(s,a){
           cell.dataset[`pf${i}`]=st.pFrom||''; cell.dataset[`pt${i}`]=st.pTo||'';
           cell.dataset[`jfrom${i}`]=st.jFrom||''; cell.dataset[`jto${i}`] = st.jTo || '';
           cell.dataset[`juz${i}`]=(st.total||0).toFixed(2);
-          if(st.score!=null){ cell.dataset[`score${i}`]=String(st.score); cell.dataset[`ptext${i}`]=st.pText||''; cell.dataset[`phuruf${i}`]=st.pHuruf||''; }
+          if (st.score!=null && Number(st.score)>0){
+    cell.dataset[`score${i}`]=String(st.score);
+    cell.dataset[`ptext${i}`]=st.pText||'';
+    cell.dataset[`phuruf${i}`]=st.pHuruf||'';
+  } else {
+    delete cell.dataset[`score${i}`];
+    delete cell.dataset[`ptext${i}`];
+    delete cell.dataset[`phuruf${i}`];
+  }
         });
         const valEl=cell.querySelector('.mur-val'); if(valEl) valEl.textContent = grand.toFixed(2)+' juz';
       }
@@ -7848,10 +7856,6 @@ if (scVal !== '' && Number(scVal) !== 0) {
   }
 }
 
-
-
-        renderSession(i);
-
         const juzVal = pickNonEmpty(ds[`juz${i}`], fromRec(i,'juz'));
         if (juzVal !== undefined){
           const v = Number(juzVal)||0;
@@ -7863,6 +7867,11 @@ if (scVal !== '' && Number(scVal) !== 0) {
 
     [1,2,3].forEach(resetOne);
     [1,2,3].forEach(loadOne);
+
+	  // ✅ Render sekali sesudah seluruh sesi diprefill
+[1,2,3].forEach(setPredikatUI);  // ini sekadar sinkron badge jika ada skor sah
+[1,2,3].forEach(renderSession);  // baru sinkron dataset+rekap
+
 
     ensureResetButtons();
   }
@@ -8012,7 +8021,18 @@ if (scVal !== '' && Number(scVal) !== 0) {
           if (ses.jFrom != null && ses.jFrom !== '') cell.dataset[`jfrom${i}`] = String(ses.jFrom); else delete cell.dataset[`jfrom${i}`];
           if (ses.jTo   != null && ses.jTo   !== '') cell.dataset[`jto${i}`]   = String(ses.jTo);   else delete cell.dataset[`jto${i}`];
           cell.dataset[`juz${i}`] = num(ses.juzVal || 0).toFixed(2);
-          if (ses.score  != null) cell.dataset[`score${i}`] = String(ses.score); else delete cell.dataset[`score${i}`];
+
+			// ganti jadi:
+if (ses.score != null && ses.score !== '' && Number(ses.score) > 0) {
+  cell.dataset[`score${i}`] = String(ses.score);
+  if (ses.pText  != null) cell.dataset[`ptext${i}`]  = String(ses.pText);
+  if (ses.pHuruf != null) cell.dataset[`phuruf${i}`] = String(ses.pHuruf);
+} else {
+  delete cell.dataset[`score${i}`];
+  delete cell.dataset[`ptext${i}`];
+  delete cell.dataset[`phuruf${i}`];
+}
+			
           if (ses.pText  != null) cell.dataset[`ptext${i}`] = String(ses.pText); else delete cell.dataset[`ptext${i}`];
           if (ses.pHuruf != null) cell.dataset[`phuruf${i}`]= String(ses.pHuruf); else delete cell.dataset[`phuruf${i}`];
         }
