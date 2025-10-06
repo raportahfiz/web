@@ -4715,26 +4715,30 @@ document.getElementById('mur-save')?.addEventListener('click', function(){ simpa
   // === Helper Kelas/Kelompok ===
 function buildKelasKelompokLine(kelas, kelasEl) {
   const kelasNum = (String(kelas||'').match(/(\d+)/)?.[1]) || (kelas || '-');
-  const custom = window.namaKelasCustom || window.NAMA_KELAS_CUSTOM || {  kelas_012526: "Kelompok Ustadzah Lylika Tri Canda Medita",
-  kelas_022526: "Kelompok Ustadzah Dewi Khumariah Rhasya",
-  kelas_032526: "Kelompok Ustadzah Nadia Nurfadhilah",
-  kelas_042526: "Kelompok Ustadzah Eliya",
-  kelas_052526: "Kelompok Ustadzah Rima Karimah",
-  kelas_062526: "Kelompok Ustadzah Rishana Hanifa",
-  kelas_072526: "Kelompok Ustadzah Karimah",
-  kelas_082526: "Kelompok Ustadzah Nurfadhilah Kamaliyah",
-  kelas_092526: "Kelompok Ustadzah Umi Muthoharoh",
-  kelas_102526: "Kelompok Ustadzah Sofi Agnia",
-  kelas_112526: "Kelompok Ustadzah Ririn Nurlaily",
-  kelas_122526: "Kelompok Ustadzah Zihan Audrian Hidayat",
-  kelas_132526: "Kelompok Ustadzah Nopia",
-  kelas_142526: "Kelompok Ustadz Imam Tolhah",
-  kelas_152526: "Kelompok Ustadz Fahri Aziz",
-  kelas_162526: "Kelompok Ustadz Saeful Munawar Rizal",
-  kelas_172526: "Kelompok Ustadz Aflah Musoddaq",
-  kelas_182526: "Kelompok Ustadz Saif Abdullah",
-  kelas_192526: "Kelompok Ustadz Muhammad Farhan Hidayat",
-  kelas_202526: "Kelompok Ustadz Farrid Ilallah"};
+  const custom = window.namaKelasCustom || window.NAMA_KELAS_CUSTOM || {  kelas_012526: "Ust. Tukimin",
+  kelas_022526: "Ust. Dicky Miswardi",
+  kelas_032526: "Ust. Jundullah BA",
+  kelas_042526: "Ust. Abdullah",
+  kelas_052526: "Ust. Ro'uuf Noor Huda Su'udin",
+  kelas_062526: "Ust. Salahuddin Santoaji P",
+  kelas_072526: "Ust. Hammam Ahmed Saleh",
+  kelas_082526: "Ust. Alif Rafiqul",
+  kelas_092526: "Ust. Ali Wardana",
+  kelas_102526: "Ust. Mullah Muhammad Umar",
+  kelas_112526: "Ust. Akhsani Tawqim",
+  kelas_122526: "Ust. Ikhsan Nur Kamidin",
+  kelas_132526: "Ust. Abdul Haq",
+  kelas_142526: "Ust. Abdullah Al Guspari",
+  kelas_152526: "Ust. Abdullah Rafi",
+  kelas_162526: "Ust. Fajriul Ihsan",
+  kelas_172526: "Ust. Idris",
+  kelas_182526: "Ust. Muhammad Athayya Mumtaz",
+  kelas_192526: "Ust. M. Hanan Azili",
+  kelas_202526: "Ust. Muhammad Rama Miayasin",
+  kelas_212526: "Ust. Nur Afiq",
+  kelas_222526: "Ust. Raditya Baswara Raharjo",
+  kelas_232526: "Ust. Rafie Zahran Kurniawan",
+  kelas_242526: "Ust. Shidiq Hasan Khan"};
     let kelompok = custom[kelas] || "";
     if (!kelompok) {
       const optText = kelasEl?.options?.[kelasEl.selectedIndex]?.text?.trim() || "";
@@ -5126,6 +5130,49 @@ window.PDF_mergeSASegmentsContinuous = PDF_mergeSASegmentsContinuous;
 window.PDF_joinSAsegmentsNamaMerged  = PDF_joinSAsegmentsNamaMerged;
 
 
+// === Compact Juz ranges: dedup + sort + merge touching/overlapping ===
+function PDF_mergeRanges(arr){
+  // normalisasi -> [a,b] dengan a<=b
+  const tmp = [];
+  const seen = new Set();
+  for (const seg of (arr||[])){
+    if (!Array.isArray(seg) || seg.length < 2) continue;
+    let a = Number(seg[0]), b = Number(seg[1]);
+    if (!Number.isFinite(a) || !Number.isFinite(b)) continue;
+    if (a > b) [a,b] = [b,a];
+    const key = `${a}-${b}`;
+    if (!seen.has(key)) { seen.add(key); tmp.push([a,b]); }
+  }
+  if (!tmp.length) return [];
+
+  // sort by start then end
+  tmp.sort((x,y)=> (x[0]-y[0]) || (x[1]-y[1]));
+
+  // merge jika nempel/overlap (start <= curEnd+1)
+  const merged = [];
+  let cur = [...tmp[0]];
+  for (let i=1;i<tmp.length;i++){
+    const [a,b] = tmp[i];
+    if (a <= cur[1] + 1) {
+      if (b > cur[1]) cur[1] = b; // extend
+    } else {
+      merged.push(cur);
+      cur = [a,b];
+    }
+  }
+  merged.push(cur);
+  return merged;
+}
+
+function PDF_joinRangeSegmentsCompact(arr, collapseSingle=true){
+  const merged = PDF_mergeRanges(arr);
+  if (!merged.length) return '-';
+  return merged.map(([a,b]) => (collapseSingle && a===b) ? `${a}` : `${a}-${b}`).join(', ');
+}
+
+// expose global (opsional)
+window.PDF_joinRangeSegmentsCompact = PDF_joinRangeSegmentsCompact;
+
 
 
   // === Pewarnaan sel SP ===
@@ -5233,7 +5280,7 @@ window.PDF_joinSAsegmentsNamaMerged  = PDF_joinSAsegmentsNamaMerged;
         const pred      = PDF_predikatFromScore(nilaiAvg);
         const statusJuz = PDF_totalAllJuzStatus(r.totalJuz, r.semester);
         const setoranText = PDF_joinSAsegmentsNamaMerged(r.saSegments);
-        const juzText     = PDF_joinRangeSegments(r.juzSegments, true);
+        const juzText     = PDF_joinRangeSegmentsCompact(r.juzSegments, true);
 
         // SLOT-based
         const hadirSlots = Number(r.hadirSlots ?? r.hadir ?? 0);
@@ -5392,11 +5439,11 @@ window.PDF_joinSAsegmentsNamaMerged  = PDF_joinSAsegmentsNamaMerged;
       const rightX = margin.left + colW + colGap;
 
       doc.setFont('helvetica','normal'); doc.setFontSize(11);
-      doc.text(`Karawang, ${ttdDate}`, margin.left + totalW, y, { align:'right' });
+      doc.text(`Tengaran, ${ttdDate}`, margin.left + totalW, y, { align:'right' });
 
       const headY = y + 8;
       doc.text('Mengetahui,', leftX, headY);
-      doc.text('Pengampu Kelas,', rightX, headY);
+      doc.text('Pengampu Halaqoh,', rightX, headY);
 
       const lineY = headY + 24;
       doc.setDrawColor(...theme.border);
@@ -5688,7 +5735,7 @@ window.PDF_joinSAsegmentsNamaMerged  = PDF_joinSAsegmentsNamaMerged;
           const pred      = PDF_predikatFromScore(nilaiAvg);
           const statusJuz = PDF_totalAllJuzStatus(r.totalJuz, r.semester);
           const setoranText = PDF_joinSAsegmentsNamaMerged(r.saSegments);
-          const juzText     = PDF_joinRangeSegments(r.juzSegments, true);
+          const juzText     = PDF_joinRangeSegmentsCompact(r.juzSegments, true);
 
           const hadirSlots = Number(r.hadirSlots ?? r.hadir ?? 0);
           const izinSlots  = Number(r.izinSlots  ?? r.izin  ?? 0);
@@ -5828,11 +5875,11 @@ window.PDF_joinSAsegmentsNamaMerged  = PDF_joinSAsegmentsNamaMerged;
       const rightX = margin.left + colW + colGap;
 
       doc.setFont('helvetica','normal'); doc.setFontSize(11);
-      doc.text(`Karawang, ${ttdDate}`, margin.left + totalW, y, { align:'right' });
+      doc.text(`Tengaran, ${ttdDate}`, margin.left + totalW, y, { align:'right' });
 
       const headY = y + 8;
       doc.text('Mengetahui,', leftX, headY);
-      doc.text('Pengampu Kelas,', rightX, headY);
+      doc.text('Pengampu Halaqoh,', rightX, headY);
 
       const lineY = headY + 24;
       doc.setDrawColor(...theme.border);
@@ -5907,7 +5954,7 @@ async function xlsRekapDownload(){
         const pred      = PDF_predikatFromScore(nilaiAvg);
         const statusJuz = PDF_totalAllJuzStatus(r.totalJuz, r.semester);
         const setoranText = PDF_joinSAsegmentsNamaMerged(r.saSegments);
-        const juzText     = PDF_joinRangeSegments(r.juzSegments, true);
+        const juzText     = PDF_joinRangeSegmentsCompact(r.juzSegments, true);
 
         const hadirSlots = Number(r.hadirSlots ?? r.hadir ?? 0);
         const izinSlots  = Number(r.izinSlots  ?? r.izin  ?? 0);
@@ -6142,7 +6189,7 @@ async function xlsRekapDownload(){
     return out.length ? out.join(', ') : '-';
   }
   function PDF_percentCapaian(totalJuzNum, semester){
-    const batasSemester = {1: 5, 2: 10, 3: 15, 4: 20, 5: 30};
+    const batasSemester = {1: 8, 2: 5, 3: 5, 4: 5, 5: 5, 6: 2};
     const total = Number(totalJuzNum);
     const sem   = Number(semester);
     if (!Number.isFinite(total)) return 0;
@@ -6567,7 +6614,7 @@ async function pdfSantriDownload(){
         h: d.cnt.hadir, a: d.cnt.alpha, s: d.cnt.sakit, i: d.cnt.izin,
         hadirPct: `${hadirPct}%`,
         setoran: PDF_joinSAsegmentsNamaMerged(d.sa),
-        juz: PDF_joinRangeSegments(d.juz, true),
+        juz: PDF_joinRangeSegmentsCompact(d.juz, true),
         totJuz: d.totalJuz ? d.totalJuz.toFixed(2) : '0.00',
 		murRange: fmtMurRange(d.murJuz || 0, (d.murJuz||0) > 0 ? 1 : 0),
         persen: statusJuzHarian.label,
@@ -6579,7 +6626,7 @@ async function pdfSantriDownload(){
     // ==== Baris REKAP (slot-based) ====
     const predTotal = PDF_predikatFromScore(nilaiAvg);
     const setoranTotal = agg ? PDF_joinSAsegmentsNamaMerged(agg.saSegments) : '-';
-    const juzTotalTxt  = agg ? PDF_joinRangeSegments(agg.juzSegments, true) : '-';
+    const juzTotalTxt  = agg ? PDF_joinRangeSegmentsCompact(agg.juzSegments, true) : '-';
 
     tableRows.push({
       _isRekap: true,
@@ -6793,11 +6840,11 @@ async function pdfSantriDownload(){
     const rightX = margin.left + colW + colGap;
 
     doc.setFont('helvetica','normal'); doc.setFontSize(11);
-    doc.text(`Karawang, ${ttdDate}`, margin.left + totalW, y, { align:'right' });
+    doc.text(`Tengaran, ${ttdDate}`, margin.left + totalW, y, { align:'right' });
 
     const headY = y + 8;
     doc.text('Mengetahui,', leftX, headY);
-    doc.text('Pengampu Kelas,', rightX, headY);
+    doc.text('Pengampu Halaqoh,', rightX, headY);
 
     const lineY = headY + 24;
     doc.setDrawColor(...theme.border);
