@@ -1,0 +1,13 @@
+{
+  "name": "mtq-app",
+  "version": "1.0.0",
+  "description": "MTQ App with Netlify Functions",
+  "main": "index.js",
+  "type": "commonjs",
+  "scripts": {
+    "build": "echo \"no build step\""
+  },
+  "dependencies": {
+    "node-fetch": "^2.6.7"
+  }
+}
