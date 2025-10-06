@@ -7149,9 +7149,11 @@ kelasSelect?.addEventListener("change", () => loadSantriData());
     { max: 100, text:'MUMTAZ',         huruf: 'A+' },
   ];
   function getPredikat(score){
-    const s = Math.max(0, Math.min(100, Number(score)||0));
-    return PREDIKATS.find(p=>s<=p.max) || PREDIKATS[PREDIKATS.length-1];
-  }
+  const s = Math.max(0, Math.min(100, Number(score)||0));
+  if (s === 0) return null;              // 0 = tidak ada predikat
+  return PREDIKATS.find(p=>s<=p.max) || PREDIKATS[PREDIKATS.length-1];
+}
+
 
  // --- META JUZ: surah/ayat & page (akurasi dari mapping kamu) ---
 const JUZ_META = {
@@ -7339,42 +7341,63 @@ function juzOfAyah(s,a){
   const murState = {1:{},2:{},3:{}};
 
   function setPredikatUI(idx){
-    const inp = $(`#mur${idx}-score`);
-    if (!inp) return;
-    const raw = String(inp.value ?? '');
+  const inp = $(`#mur${idx}-score`);
+  if (!inp) return;
+  const raw = String(inp.value ?? '');
 
-    if (raw.trim() === '') {
-      $(`#mur${idx}-predikatBadge`).textContent = '–';
-      murState[idx].score  = null;
-      murState[idx].pText  = '';
-      murState[idx].pHuruf = '';
-      if (currentRowEl){
-        const cell = currentRowEl.querySelector('.murajaah-cell');
-        if (cell){
-          delete cell.dataset[`score${idx}`];
-          delete cell.dataset[`ptext${idx}`];
-          delete cell.dataset[`phuruf${idx}`];
-        }
-      }
-      return;
-    }
-
-    const sc = Math.max(0, Math.min(100, parseInt(raw, 10) || 0));
-    const p  = getPredikat(sc);
-    $(`#mur${idx}-predikatBadge`).textContent = `${p.text} (${p.huruf})`;
-    murState[idx].score  = sc;
-    murState[idx].pText  = p.text;
-    murState[idx].pHuruf = p.huruf;
-
+  // Kosong → hapus predikat & score dari UI+state+dataset
+  if (raw.trim() === '') {
+    $(`#mur${idx}-predikatBadge`).textContent = '–';
+    murState[idx].score  = null;
+    murState[idx].pText  = '';
+    murState[idx].pHuruf = '';
     if (currentRowEl){
-      const cell=currentRowEl.querySelector('.murajaah-cell');
+      const cell = currentRowEl.querySelector('.murajaah-cell');
       if (cell){
-        cell.dataset[`score${idx}`] = String(sc);
-        cell.dataset[`ptext${idx}`] = p.text;
-        cell.dataset[`phuruf${idx}`]= p.huruf;
+        delete cell.dataset[`score${idx}`];
+        delete cell.dataset[`ptext${idx}`];
+        delete cell.dataset[`phuruf${idx}`];
       }
+    }
+    return;
+  }
+
+  const sc = Math.max(0, Math.min(100, parseInt(raw, 10) || 0));
+
+  // Khusus skor 0 → tidak ada predikat
+  if (sc === 0){
+    $(`#mur${idx}-predikatBadge`).textContent = '–';
+    murState[idx].score  = 0;
+    murState[idx].pText  = '';
+    murState[idx].pHuruf = '';
+    if (currentRowEl){
+      const cell = currentRowEl.querySelector('.murajaah-cell');
+      if (cell){
+        cell.dataset[`score${idx}`] = '0';
+        delete cell.dataset[`ptext${idx}`];
+        delete cell.dataset[`phuruf${idx}`];
+      }
+    }
+    return;
+  }
+
+  // > 0 → pakai predikat normal (ROSIB 1–59, dst.)
+  const p = getPredikat(sc);
+  $(`#mur${idx}-predikatBadge`).textContent = `${p.text} (${p.huruf})`;
+  murState[idx].score  = sc;
+  murState[idx].pText  = p.text;
+  murState[idx].pHuruf = p.huruf;
+
+  if (currentRowEl){
+    const cell = currentRowEl.querySelector('.murajaah-cell');
+    if (cell){
+      cell.dataset[`score${idx}`] = String(sc);
+      cell.dataset[`ptext${idx}`] = p.text;
+      cell.dataset[`phuruf${idx}`]= p.huruf;
     }
   }
+}
+
 
   // === Reset satu sesi ke PRISTINE (lokal) ===
   function resetSession(idx){
