@@ -2749,8 +2749,8 @@ logoutBtn.addEventListener("click", () => {
   // Konfigurasi global yang bisa dioverride sebelum loadSantriData jalan
   window.ABS_FLEX_CFG = window.ABS_FLEX_CFG || {
     statuses: ["hadir","izin","sakit","alpha"],
-    perStatus: Number(window.ABS_FLEX_PER_STATUS ?? 4), // default 2 unit per status (hadir1..2, dst)
-	defaultTarget: 4,                                   // default denominator
+    perStatus: Number(window.ABS_FLEX_PER_STATUS ?? 4), // default 4 sesi, bisa 1..6
+    defaultTarget: 4,                                   // default denominator
     maxTarget: 6,                                       // denominator 1..6
     labels: null                                        // {hadir:[...], izin:[...], ...] (opsional)
   };
@@ -2769,7 +2769,7 @@ logoutBtn.addEventListener("click", () => {
     const Title   = st.charAt(0).toUpperCase() + st.slice(1);
     const idx     = i - 1;
     const per     = ABS_FLEX_CFG.perStatus|0;
-    const sesiAll = ["Subuh","Pagi","Sore","Malam"];
+    const sesiAll = ["Subuh","Pagi","Sore","Malam","Ekstra 1","Ekstra 2"];
 
     // Legacy: jika tetap 2 sesi, pertahankan Pagi/Sore
     if (per === 2){
@@ -2842,7 +2842,28 @@ logoutBtn.addEventListener("click", () => {
     return items;
   }
 
-  // Render widget ke target container (dipakai di MODAL)
+  // --------- Helper eksklusivitas per sesi ---------
+  const sessionOfKey = (key) => {
+    const m = String(key).match(/(\d+)$/);
+    return m ? Number(m[1]) : null;
+  };
+
+  function normalizeExclusiveItems(items, perStatus, keep="lifo"){
+    // Jika preset menandai lebih dari 1 pilihan dalam satu sesi, sisakan satu saja.
+    for (let s=1; s<=perStatus; s++){
+      const idxs = items
+        .map((it, idx) => ({it, idx}))
+        .filter(x => x.it.checked && sessionOfKey(x.it.key) === s)
+        .map(x => x.idx);
+      if (idxs.length > 1){
+        const keepIdx = (keep === "fifo") ? idxs[0] : idxs[idxs.length - 1];
+        items = items.map((it, i) => i === keepIdx ? it : (idxs.includes(i) ? {...it, checked:false} : it));
+      }
+    }
+    return items;
+  }
+
+  // Render widget ke target container (dipakai di MODAL) — sudah termasuk eksklusivitas per sesi
   window.renderAbsensiFlex = function renderAbsensiFlex(container, { target=ABS_FLEX_CFG.defaultTarget, presetItems=null } = {}){
     const root = (typeof container === "string") ? document.getElementById(container) : container;
     if (!root) throw new Error("Container absensi tidak ditemukan");
@@ -2868,7 +2889,11 @@ logoutBtn.addEventListener("click", () => {
             <div style="display:grid;gap:6px;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));">
               ${Array.from({length:perStatus},(_,i)=>`
                 <label style="display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:8px;border:1px solid #f1f5f9;min-height:32px;min-width:0;">
-                  <input type="checkbox" data-abskey="${st}${i+1}" style="width:16px;height:16px;">
+                  <input type="checkbox"
+                         data-abskey="${st}${i+1}"
+                         data-session="${i+1}"
+                         data-status="${st}"
+                         style="width:16px;height:16px;">
                   <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;">${labelFor(st, i+1)}</span>
                 </label>
               `).join("")}
@@ -2890,6 +2915,9 @@ logoutBtn.addEventListener("click", () => {
     } else {
       items = keys.map(k => ({ key:k, checked:false }));
     }
+
+    // Normalisasi preset agar eksklusif per sesi
+    items = normalizeExclusiveItems(items, perStatus, "lifo");
 
     function writeUI(){
       boxes.forEach(b => {
@@ -2914,24 +2942,71 @@ logoutBtn.addEventListener("click", () => {
       root._absensiPercent = Math.round(rec.percent);
     }
 
+    // --- Eksklusivitas per sesi: enable/disable antar status dalam sesi yang sama ---
+    function syncDisablesFromItems(){
+      for (let s=1; s<=perStatus; s++){
+        const chosen = items.find(it => it.checked && sessionOfKey(it.key) === s);
+        const sessionBoxes = boxes.filter(b => Number(b.dataset.session) === s);
+        if (chosen){
+          sessionBoxes.forEach(b => {
+            const isChosen = String(b.dataset.abskey).toLowerCase() === chosen.key;
+            b.disabled = !isChosen;
+          });
+        } else {
+          sessionBoxes.forEach(b => { b.disabled = false; });
+        }
+      }
+    }
+
+    function selectExclusive(session, chosenKeyOrNull){
+      items = items.map(it => {
+        const s = sessionOfKey(it.key);
+        if (s === session){
+          return { ...it, checked: (chosenKeyOrNull ? it.key === chosenKeyOrNull : false) };
+        }
+        return it;
+      });
+      syncDisablesFromItems();
+    }
+
     // listeners
     root.addEventListener("change", (e) => {
       if (e.target === targetEl) {
         items = clampToTarget(items, Number(targetEl.value) || ABS_FLEX_CFG.defaultTarget, "lifo");
-        writeUI(); recalcExpose();
+        // Pastikan tetap eksklusif per sesi setelah clamp
+        items = normalizeExclusiveItems(items, perStatus, "lifo");
+        writeUI();
+        syncDisablesFromItems();
+        recalcExpose();
         return;
       }
       if (e.target.matches('input[type="checkbox"][data-abskey]')) {
-        const k = String(e.target.dataset.abskey).toLowerCase();
-        const it = items.find(x => x.key === k);
-        if (it) it.checked = !!e.target.checked;
+        const session = Number(e.target.dataset.session);
+        const key     = String(e.target.dataset.abskey).toLowerCase();
+
+        if (e.target.checked){
+          // pilih eksklusif pada sesi ini
+          selectExclusive(session, key);
+        } else {
+          // kosongkan sesi ini
+          selectExclusive(session, null);
+        }
+
+        // Clamp terhadap target total slot tercentang
         items = clampToTarget(items, Number(targetEl.value) || ABS_FLEX_CFG.defaultTarget, "lifo");
-        writeUI(); recalcExpose();
+        // Jaga eksklusivitas (kalau clamp mematikan pilihan di sesi lain)
+        items = normalizeExclusiveItems(items, perStatus, "lifo");
+
+        writeUI();
+        syncDisablesFromItems();
+        recalcExpose();
       }
     });
 
     // init tampilan
-    writeUI(); recalcExpose();
+    writeUI();
+    syncDisablesFromItems();
+    recalcExpose();
     return root;
   };
 
@@ -2993,7 +3068,6 @@ logoutBtn.addEventListener("click", () => {
   }
   window.ensureAbsensiModal = ensureAbsensiModal;
 })();
-
 
 // === Load data santri ===
 async function loadDataSantri() {
