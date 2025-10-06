@@ -10,7 +10,7 @@ export async function onRequest({ request, env }) {
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
   if (url.pathname !== "/api/getUsers") return new Response("Not Found", { status: 404, headers: CORS });
 
-  const githubApiUrl = "https://api.github.com/repos/muqoddammtb/server/contents/user.json";
+  const githubApiUrl = "https://api.github.com/repos/raportahfiz/server/contents/user.json";
   try {
     const res = await fetch(githubApiUrl, {
       headers: {
