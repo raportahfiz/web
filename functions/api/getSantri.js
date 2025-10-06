@@ -22,7 +22,7 @@ export async function onRequest({ request, env }) {
 
   // NOTE: path ini sesuai kode asalmu (root repo: <kelas>.json).
   // Kalau file-nya ada di folder lain, ubah saja path-nya.
-  const apiUrl = `https://api.github.com/repos/muqoddammtb/server/contents/${encodeURIComponent(kelas)}.json`;
+  const apiUrl = `https://api.github.com/repos/raportahfiz/server/contents/${encodeURIComponent(kelas)}.json`;
 
   try {
     const gh = await fetch(apiUrl, {
