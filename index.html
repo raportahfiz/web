@@ -4185,6 +4185,13 @@ tanggalInput.addEventListener("change", loadSantriData);
 // ====== SIMPAN DATA MUTABAAH ======
 // ====== SIMPAN DATA MUTABAAH ====== 
 async function simpanDataMutabaah(saveBtn){
+
+try {
+    if (window.currentRowEl && typeof window.renderSession === 'function') {
+      [1,2,3].forEach(i => window.renderSession(i));
+    }
+  } catch(_) {}
+	
   const rows  = document.querySelectorAll('#santri-table tbody tr');
 
   function resolveKelas(){
