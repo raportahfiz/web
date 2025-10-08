@@ -1405,6 +1405,9 @@ async function buatUserNIS() {
 
       <!-- Row 3, Col 2: PDF All Halaqoh -->
       <button id="download-pdf-allkelas" class="rekap-btn">PDF All Halaqoh</button>
+
+		<!-- Row 4, Col 1: Download File .sqlite -->
+	  <button id="download-sqlite-open" class="rekap-btn" style="background:#10b981;">Download File .sqlite</button>
     </div>
 
     <!-- Tombol tutup -->
@@ -1467,6 +1470,45 @@ async function buatUserNIS() {
     </div>
   </div>
 </div>
+
+
+<!-- Modal Cek Admin (Step 1) -->
+<div id="adminCheckModal" style="
+  display:none; position:fixed; top:0; left:0; width:100%; height:100%;
+  background:rgba(0,0,0,0.5); z-index:1100; justify-content:center; align-items:center;">
+  <div style="background:#fff; padding:20px; border-radius:8px; min-width:320px; max-width:92%;">
+    <h3>Verifikasi Admin</h3>
+    <p style="margin:.5rem 0 .75rem;">Masukkan password admin untuk melanjutkan.</p>
+    <div style="display:flex; gap:.5rem; align-items:center;">
+      <input id="admin-pass" type="password" placeholder="Password admin" style="flex:1; padding:.5rem; border:1px solid #d1d5db; border-radius:8px;">
+      <button id="admin-pass-submit" class="rekap-btn" style="background:#0ea5e9;">Verifikasi</button>
+      <button id="admin-pass-cancel" class="rekap-btn" style="background:#6b7280;">Batal</button>
+    </div>
+    <div id="admin-pass-hint" style="color:#ef4444; font-size:.9rem; margin-top:.5rem; display:none;"></div>
+  </div>
+</div>
+
+<!-- Modal Rentang Tanggal SQLite (Step 2) -->
+<div id="sqliteRangeModal" style="
+  display:none; position:fixed; top:0; left:0; width:100%; height:100%;
+  background:rgba(0,0,0,0.5); z-index:1200; justify-content:center; align-items:center;">
+  <div style="background:#fff; padding:20px; border-radius:8px; min-width:320px; max-width:92%;">
+    <h3>Rentang Tanggal — File .sqlite</h3>
+    <div class="pdf-rekap-controls" style="margin-top:.75rem;">
+      <div class="date-item">
+        <label for="sqlite-start-date">Mulai</label>
+        <input type="date" id="sqlite-start-date" />
+      </div>
+      <div class="date-item">
+        <label for="sqlite-end-date">s/d</label>
+        <input type="date" id="sqlite-end-date" />
+      </div>
+      <button id="sqlite-start-download" class="rekap-btn" style="background:#10b981;">Mulai Unduh File .sqlite</button>
+      <button id="sqlite-cancel" class="rekap-btn" style="background:#6b7280;">Batal</button>
+    </div>
+  </div>
+</div>
+		
 <button class="logout-btn" id="logout-btn">Keluar</button>
 </div>
 
@@ -6880,6 +6922,306 @@ window._pdfSantriDownload = pdfSantriDownload;
 // ============================
 // B. DOWNLOAD DATA
 // ============================
+
+
+<script>
+/* ===========================
+   SQLITE EXPORT – FLOW 3 MODAL
+   1) Klik "Download File .sqlite" di modal utama
+   2) Modal Cek Admin (/api/cek-admin) => password
+   3) Modal Rentang Tanggal => "Mulai Unduh File .sqlite"
+=========================== */
+
+/* --- helper UI kecil --- */
+function _btnBusy(btn, on, txt='Mengerjakan…'){
+  if (!btn) return;
+  if (on){ btn.dataset._t = btn.textContent; btn.textContent = txt; btn.disabled = true; }
+  else { if (btn.dataset._t){ btn.textContent = btn.dataset._t; delete btn.dataset._t; } btn.disabled = false; }
+}
+function _pad2(n){ return String(n).padStart(2,'0'); }
+function _stamp(){ const d=new Date(); return `${d.getFullYear()}-${_pad2(d.getMonth()+1)}-${_pad2(d.getDate())}_${_pad2(d.getHours())}${_pad2(d.getMinutes())}`; }
+
+/* --- state --- */
+let _adminOK = false;
+
+/* --- modal refs --- */
+const btnOpenSQLite   = document.getElementById('download-sqlite-open');
+const adminModal      = document.getElementById('adminCheckModal');
+const adminPass       = document.getElementById('admin-pass');
+const adminSubmit     = document.getElementById('admin-pass-submit');
+const adminCancel     = document.getElementById('admin-pass-cancel');
+const adminHint       = document.getElementById('admin-pass-hint');
+
+const sqliteModal     = document.getElementById('sqliteRangeModal');
+const sqliteStartI    = document.getElementById('sqlite-start-date');
+const sqliteEndI      = document.getElementById('sqlite-end-date');
+const sqliteGo        = document.getElementById('sqlite-start-download');
+const sqliteCancel    = document.getElementById('sqlite-cancel');
+
+/* --- open flow --- */
+btnOpenSQLite?.addEventListener('click', () => {
+  // step-1: buka modal cek-admin
+  adminPass.value = '';
+  adminHint.style.display = 'none';
+  adminModal.style.display = 'flex';
+  setTimeout(()=> adminPass?.focus?.(), 30);
+});
+
+/* --- cek admin via /api/cek-admin --- */
+async function verifyAdmin(password){
+  // utamakan POST body JSON; fallback ke GET jika server Anda demikian
+  try{
+    const r = await fetch('/api/cek-admin', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      credentials:'include',
+      cache:'no-store',
+      body: JSON.stringify({ password })
+    });
+    if (r.ok){
+      const j = await r.json().catch(()=> ({}));
+      // diterima jika {ok:true} atau {isAdmin:true}
+      return !!(j.ok || j.isAdmin || /admin/i.test(String(j.role||'')));
+    }
+  }catch(e){}
+  // fallback GET ?password=
+  try{
+    const q = new URLSearchParams({ password }).toString();
+    const r = await fetch(`/api/cek-admin?${q}`, { credentials:'include', cache:'no-store' });
+    if (r.ok){
+      const j = await r.json().catch(()=> ({}));
+      return !!(j.ok || j.isAdmin || /admin/i.test(String(j.role||'')));
+    }
+  }catch(e){}
+  return false;
+}
+
+adminSubmit?.addEventListener('click', async () => {
+  _btnBusy(adminSubmit, true, 'Memverifikasi…');
+  adminHint.style.display = 'none';
+  try{
+    const pass = adminPass.value || '';
+    if (!pass){ adminHint.textContent = 'Password tidak boleh kosong.'; adminHint.style.display='block'; return; }
+    const ok = await verifyAdmin(pass);
+    if (!ok){
+      adminHint.textContent = 'Password salah atau akses ditolak.';
+      adminHint.style.display = 'block';
+      return;
+    }
+    _adminOK = true;
+    // tutup modal admin ➜ buka modal tanggal
+    adminModal.style.display = 'none';
+    // isi default tanggal dengan nilai dari modal utama jika ada
+    const d0 = document.getElementById('pdf-start-date')?.value || '';
+    const d1 = document.getElementById('pdf-end-date')?.value || '';
+    if (d0) sqliteStartI.value = d0;
+    if (d1) sqliteEndI.value   = d1;
+    sqliteModal.style.display = 'flex';
+    setTimeout(()=> sqliteStartI?.focus?.(), 30);
+  }finally{
+    _btnBusy(adminSubmit, false);
+  }
+});
+
+adminCancel?.addEventListener('click', () => {
+  adminModal.style.display = 'none';
+});
+
+/* --- loader sql.js (sqlite wasm) --- */
+let _SQLJS_READY = null;
+async function ensureSQLJS(){
+  if (_SQLJS_READY) return _SQLJS_READY;
+  _SQLJS_READY = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js';
+    s.onload = async () => {
+      try{
+        const SQL = await window.initSqlJs({
+          locateFile: f => 'https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.wasm'
+        });
+        resolve(SQL);
+      }catch(e){ reject(e); }
+    };
+    s.onerror = () => reject(new Error('Gagal memuat sql.js'));
+    document.head.appendChild(s);
+  });
+  return _SQLJS_READY;
+}
+
+/* --- util data --- */
+function _allKelas(){ return (typeof _getAllKelasKeys==='function') ? _getAllKelasKeys() : []; }
+async function _rawDaily(kelasKey, start, end){
+  try{
+    if (typeof d1FetchAbsensiRawList==='function') return await d1FetchAbsensiRawList({ kelas:kelasKey, start, end });
+  }catch(e){ console.warn('rawDaily fail', kelasKey, e); }
+  return null;
+}
+
+/* --- build & download sqlite --- */
+async function doSQLiteExport(startDate, endDate){
+  const SQL = await ensureSQLJS();
+  const db  = new SQL.Database();
+
+  // skema
+  db.run(`
+    PRAGMA user_version = 1;
+    CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT);
+    CREATE TABLE classes (kelas_key TEXT PRIMARY KEY, kelas_line TEXT, kbm_days INTEGER, total_santri INTEGER);
+    CREATE TABLE students (
+      key TEXT PRIMARY KEY, nis TEXT, id TEXT, nama TEXT, semester INTEGER, jenjang TEXT, keterangan TEXT
+    );
+    CREATE TABLE aggregates (
+      kelas_key TEXT, "key" TEXT,
+      hadir INTEGER, izin INTEGER, sakit INTEGER, alpha INTEGER,
+      target_slots INTEGER, hadir_pct INTEGER,
+      total_pages INTEGER,
+      total_juz REAL,
+      mur_total_juz REAL, mur_count INTEGER,
+      nilai_avg REAL, nilai_min REAL, nilai_max REAL,
+      juz_text TEXT, sa_text TEXT,
+      PRIMARY KEY (kelas_key, "key")
+    );
+    CREATE TABLE details (
+      kelas_key TEXT, "key" TEXT,
+      tanggal TEXT, status TEXT,
+      dari TEXT, sampai TEXT,
+      halaman TEXT, total_page INTEGER,
+      total_juz REAL, mur_juz REAL,
+      nilai REAL
+    );
+  `);
+
+  db.run('INSERT INTO meta(key,value) VALUES (?,?),(?,?)', [
+    'periode', `${startDate} s.d. ${endDate}`,
+    'generated_at', new Date().toISOString()
+  ]);
+
+  const kelasKeys = _allKelas();
+  if (!kelasKeys.length) throw new Error('Tidak menemukan daftar kelas.');
+  const insClass   = db.prepare('INSERT OR REPLACE INTO classes(kelas_key,kelas_line,kbm_days,total_santri) VALUES (?,?,?,?)');
+  const insStudent = db.prepare('INSERT OR REPLACE INTO students(key,nis,id,nama,semester,jenjang,keterangan) VALUES (?,?,?,?,?,?,?)');
+  const insAgg     = db.prepare(`
+    INSERT OR REPLACE INTO aggregates(
+      kelas_key,"key",hadir,izin,sakit,alpha,target_slots,hadir_pct,total_pages,total_juz,
+      mur_total_juz,mur_count,nilai_avg,nilai_min,nilai_max,juz_text,sa_text
+    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+  `);
+  const insDet     = db.prepare(`
+    INSERT INTO details(kelas_key,"key",tanggal,status,dari,sampai,halaman,total_page,total_juz,mur_juz,nilai)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?)
+  `);
+
+  let totalRows = 0; // sanity
+
+  for (const k of kelasKeys){
+    const d = await collectRekapDataForClass(k, startDate, endDate).catch(()=>null);
+    if (!d) continue;
+
+    const { kelas:kelasKey, kelasLine, kbmDays, rows } = d;
+    insClass.run([kelasKey, kelasLine || '', Number(kbmDays||0), rows.length]);
+    totalRows += rows.length;
+
+    for (const r of rows){
+      const key = (r.nis && String(r.nis).trim()) || (r.id && String(r.id).trim());
+      if (!key) continue;
+
+      const targetSlots = Number(r.targetSlots||0);
+      const hadirSlots  = Number(r.hadirSlots ?? r.hadir ?? 0);
+      const izinSlots   = Number(r.izinSlots  ?? r.izin  ?? 0);
+      const sakitSlots  = Number(r.sakitSlots ?? r.sakit ?? 0);
+      const alphaSlots  = Number(r.alphaSlots ?? r.alpha ?? 0);
+      const hadirPct    = targetSlots>0 ? Math.round(100*hadirSlots/targetSlots) : 0;
+      const nilaiAvg    = r.nilaiCount ? (r.nilaiSum/r.nilaiCount) : null;
+
+      const juzTxt = (typeof PDF_joinRangeSegmentsCompact==='function')
+        ? PDF_joinRangeSegmentsCompact(r.juzSegments, true) : '';
+      const saTxt  = (typeof PDF_joinSAsegmentsNamaMerged==='function')
+        ? PDF_joinSAsegmentsNamaMerged(r.saSegments) : '';
+
+      insStudent.run([
+        key, r.nis || null, r.id || null, r.nama || null,
+        (r.semester!=null? Number(r.semester):null),
+        (typeof jenjangLabel==='function'? jenjangLabel(r.jenjang) : (r.jenjang ?? null)) || null,
+        r.keterangan || null
+      ]);
+
+      insAgg.run([
+        kelasKey, key,
+        hadirSlots, izinSlots, sakitSlots, alphaSlots,
+        targetSlots, hadirPct,
+        Number(r.totalPageSum||0),
+        Number((r.totalJuz||0).toFixed ? r.totalJuz.toFixed(2) : r.totalJuz||0),
+        Number(r.murTotalJuz||0), Number(r.murCount||0),
+        (nilaiAvg!=null ? Number(nilaiAvg.toFixed(2)) : null),
+        (Number.isFinite(r.nilaiMin) ? r.nilaiMin : null),
+        (Number.isFinite(r.nilaiMax) ? r.nilaiMax : null),
+        juzTxt || null, saTxt || null
+      ]);
+    }
+
+    // detail harian (opsional jika API tersedia)
+    const raw = await _rawDaily(kelasKey, startDate, endDate);
+    if (Array.isArray(raw)){
+      for (const it of raw){
+        const key = (it.nis && String(it.nis).trim()) || (it.id && String(it.id).trim());
+        if (!key) continue;
+        insDet.run([
+          kelasKey, key,
+          (it?.tanggal ? String(it.tanggal).slice(0,10) : null),
+          (typeof PDF_normStatus==='function') ? PDF_normStatus(it?.absensi ?? it?.status) : (it?.status || null),
+          it?.dari || it?.dariSetoran || null,
+          it?.sampai || it?.sampaiSetoran || null,
+          it?.halaman || it?.page || null,
+          (it?.totalHalaman ?? it?.totalPage) ?? null,
+          (it?.totalJuz ?? it?.juz) ?? null,
+          (it?.juzmurajaah ?? it?.murajaah ?? it?.mur_juz) ?? null,
+          (it?.buttonCell?.nilai ?? it?.nilai ?? it?.score) ?? null
+        ]);
+      }
+    }
+  }
+
+  if (!totalRows) throw new Error('Tidak ada data pada rentang tersebut.');
+
+  // export & unduh
+  const bytes = db.export();
+  const blob  = new Blob([bytes], { type: 'application/octet-stream' });
+  const url   = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `Rekap_AllKelas_${startDate}_sd_${endDate}_${_stamp()}.sqlite`;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+
+/* --- listener modal tanggal --- */
+sqliteGo?.addEventListener('click', async () => {
+  if (!_adminOK){ alert('Akses ditolak. Silakan verifikasi admin terlebih dahulu.'); return; }
+  const startDate = sqliteStartI?.value;
+  const endDate   = sqliteEndI?.value;
+  if (!startDate || !endDate){ alert('Mohon pilih tanggal mulai & akhir.'); return; }
+
+  if (window._sqliteBusy) return;
+  window._sqliteBusy = true;
+  _btnBusy(sqliteGo, true, 'Menyusun SQLite…');
+  try{
+    await doSQLiteExport(startDate, endDate);
+    sqliteModal.style.display = 'none';
+  }catch(err){
+    console.error(err);
+    alert('Gagal membuat SQLite: ' + (err.message || err));
+  }finally{
+    _btnBusy(sqliteGo, false);
+    window._sqliteBusy = false;
+  }
+});
+
+sqliteCancel?.addEventListener('click', () => { sqliteModal.style.display = 'none'; });
+
+/* --- tutup dengan klik di luar --- */
+adminModal?.addEventListener('click', (e)=>{ if (e.target === adminModal) adminModal.style.display='none'; });
+sqliteModal?.addEventListener('click', (e)=>{ if (e.target === sqliteModal) sqliteModal.style.display='none'; });
+</script>	 
 
 
 
