@@ -4185,12 +4185,6 @@ tanggalInput.addEventListener("change", loadSantriData);
 // ====== SIMPAN DATA MUTABAAH ======
 // ====== SIMPAN DATA MUTABAAH ====== 
 async function simpanDataMutabaah(saveBtn){
-	try {
-    if (window.currentRowEl && typeof window.renderSession === 'function') {
-      [1,2,3].forEach(i => window.renderSession(i));
-    }
-  } catch(_) {}
-	
   const rows  = document.querySelectorAll('#santri-table tbody tr');
 
   function resolveKelas(){
@@ -4313,19 +4307,19 @@ async function simpanDataMutabaah(saveBtn){
       const exSes = (Array.isArray(ex.murSessions) && ex.murSessions[i-1]) ? ex.murSessions[i-1] : {};
 
       // Wipe logic: jika jzRaw ada dan bernilai 0 -> HAPUS from/to/pages (tanpa fallback)
-      const wiped = (cell?.dataset?.[`wipe${i}`] === '1');
+      const wiped = (jzRaw !== undefined) && (num(jzRaw) === 0);
 
       const sess = {
-  from:  (sF||aF) ? `${sF||''}:${aF||''}` : (wiped ? "" : (existing[`murFrom${i}`] ?? exSes.from ?? "")),
-  to:    (sT||aT) ? `${sT||''}:${aT||''}` : (wiped ? "" : (existing[`murTo${i}`]   ?? exSes.to   ?? "")),
-  pages: (pF||pT) ? `${pF||''}-${pT||''}` : (wiped ? "" : (existing[`murPages${i}`]?? exSes.pages?? "")),
-  jFrom: (jF !== undefined) ? (jF===""? null : Number(jF)) : (existing[`jFrom${i}`] ?? exSes.jFrom ?? null),
-  jTo:   (jT !== undefined) ? (jT===""? null : Number(jT)) : (existing[`jTo${i}`]   ?? exSes.jTo   ?? null),
-  juz:   (jzRaw!==undefined) ? num(jzRaw) : num(existing[`juzmur${i}`] ?? existing[`juzSesi${i}`] ?? exSes.juz ?? 0),
-  score: num(sc ?? (existing[`murScore${i}`] ?? exSes.score ?? 0)),
-  predikatText:  (pt !== undefined) ? pt : (existing[`murPredText${i}`]  ?? exSes.predikatText  ?? ""),
-  predikatHuruf: (ph !== undefined) ? ph : (existing[`murPredHuruf${i}`] ?? exSes.predikatHuruf ?? "")
-};
+        from:  (sF||aF) ? `${sF||''}:${aF||''}` : (wiped ? "" : (ex[`murFrom${i}`] ?? exSes.from ?? "")),
+        to:    (sT||aT) ? `${sT||''}:${aT||''}` : (wiped ? "" : (ex[`murTo${i}`]   ?? exSes.to   ?? "")),
+        pages: (pF||pT) ? `${pF||''}-${pT||''}` : (wiped ? "" : (ex[`murPages${i}`]?? exSes.pages?? "")),
+        jFrom: (jF !== undefined) ? (jF===""? null : Number(jF)) : (ex[`jFrom${i}`] ?? exSes.jFrom ?? null),
+        jTo:   (jT !== undefined) ? (jT===""? null : Number(jT)) : (ex[`jTo${i}`]   ?? exSes.jTo   ?? null),
+        juz:   (jzRaw!==undefined) ? num(jzRaw) : num(ex[`juzmur${i}`] ?? ex[`juzSesi${i}`] ?? exSes.juz ?? 0),
+        score: num(sc ?? (ex[`murScore${i}`] ?? exSes.score ?? 0)),
+        predikatText:  (pt !== undefined) ? pt : (ex[`murPredText${i}`]  ?? exSes.predikatText  ?? ""),
+        predikatHuruf: (ph !== undefined) ? ph : (ex[`murPredHuruf${i}`] ?? exSes.predikatHuruf ?? "")
+      };
       out.sessions.push(sess);
     }
 
@@ -7724,11 +7718,6 @@ function juzOfAyah(s,a){
 
     let pF=+pFv, pT=+pTv;
     if(pT<pF){ pT=pF; $(`#mur${idx}-pageTo`).value=String(pF); }
-
-	// ⬇️ Tambahan: simpan ke state agar konsisten
-  murState[idx].pFrom = String(pF);
-  murState[idx].pTo   = String(pT);
-  murState[idx].touched = true;
 
     const r=pagesToAyahRange(pF,pT);
     if(r){
