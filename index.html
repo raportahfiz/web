@@ -7635,11 +7635,12 @@ function juzOfAyah(s,a){
           $(`#mur${idx}-pageTo`).value = '604';
         }
 
-        const jrF=getJuzRange(jF), jrT=getJuzRange(jT);
-        if(jrF && jrT && jrF.sFrom===sF && jrF.aFrom===aF && jrT.sTo===sT && jrT.aTo===aT){
-          const jfEl=$(`#mur${idx}-juzFrom`), jtEl=$(`#mur${idx}-juzTo`);
-          if(jfEl && jtEl){ jfEl.value=String(jF); jtEl.value=String(jT); }
-        }
+        {
+  const jfEl = $(`#mur${idx}-juzFrom`);
+  const jtEl = $(`#mur${idx}-juzTo`);
+  if (jfEl) jfEl.value = String(jF);
+  if (jtEl) jtEl.value = String(jT);
+}
 
         setPredikatUI(idx);
 
