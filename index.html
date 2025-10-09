@@ -10787,20 +10787,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 
-<button id="rtlToggle" style="position:fixed;bottom:8px;inset-inline-end:8px;z-index:9999;">RTL/LTR</button>
-<script>
-(function(){
-  const KEY='ui-dir';
-  const saved=localStorage.getItem(KEY);
-  if (saved==='rtl'||saved==='ltr') document.documentElement.setAttribute('dir', saved);
-  document.getElementById('rtlToggle')?.addEventListener('click',()=>{
-    const html=document.documentElement;
-    const next=html.getAttribute('dir')==='rtl'?'ltr':'rtl';
-    html.setAttribute('dir', next);
-    localStorage.setItem(KEY,next);
-  });
-})();
-</script>
+
 
 
 <style id="rtl-patch">
