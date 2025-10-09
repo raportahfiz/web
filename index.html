@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="ar" dir="rtl">
+
 <head>
 
 <!-- Charset & Viewport -->
@@ -10786,6 +10787,76 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 
+<button id="rtlToggle" style="position:fixed;bottom:8px;inset-inline-end:8px;z-index:9999;">RTL/LTR</button>
+<script>
+(function(){
+  const KEY='ui-dir';
+  const saved=localStorage.getItem(KEY);
+  if (saved==='rtl'||saved==='ltr') document.documentElement.setAttribute('dir', saved);
+  document.getElementById('rtlToggle')?.addEventListener('click',()=>{
+    const html=document.documentElement;
+    const next=html.getAttribute('dir')==='rtl'?'ltr':'rtl';
+    html.setAttribute('dir', next);
+    localStorage.setItem(KEY,next);
+  });
+})();
+</script>
+
+
+<style id="rtl-patch">
+/* ====== GLOBAL ====== */
+html[dir="rtl"] { direction: rtl; }
+html[dir="rtl"] body, 
+html[dir="rtl"] input, 
+html[dir="rtl"] select, 
+html[dir="rtl"] textarea, 
+html[dir="rtl"] button { text-align: start; }
+
+/* ====== TABEL: mulai dari kanan, teks ikut start/end ====== */
+html[dir="rtl"] #santri-table { direction: rtl; }
+html[dir="rtl"] #santri-table th,
+html[dir="rtl"] #santri-table td { text-align: start; }
+
+/* Kolom pertama sticky: pindahkan dari kiri ke kanan */
+html[dir="rtl"] #santri-table th:first-child,
+html[dir="rtl"] #santri-table td:first-child {
+  left: auto; right: 0;                    /* pindah anchor */
+  border-right: 0; border-left: 1px solid #ccc; /* garis pindah sisi */
+}
+html[dir="rtl"] #santri-table thead th:first-child { left:auto; right:0; }
+
+/* ====== PASSWORD: ikon & padding pindah ke sisi “end” (kiri pada RTL) ====== */
+html[dir="rtl"] .password-wrapper input {
+  padding-right: 0; 
+  padding-left: 40px;   /* ruang untuk ikon di kiri */
+}
+html[dir="rtl"] .toggle-password { 
+  right: auto; 
+  left: 10px;           /* ikon pindah ke kiri */
+}
+
+/* ====== KONTROL TANGGAL: margin jadi logis ====== */
+html[dir="rtl"] .date-item input { 
+  margin-left: 0; 
+  margin-right: 2px;    /* jarak kecil ke arah start RTL */
+}
+@media (max-width:600px){
+  html[dir="rtl"] .date-item + .date-item{
+    margin-left: 0; 
+    margin-right: .35rem;
+  }
+}
+@media (min-width:601px){
+  html[dir="rtl"] .date-item + .date-item{
+    margin-left: 0; 
+    margin-right: .5rem;
+  }
+}
+
+/* ====== IKON ARAH (opsional): balikkan kalau perlu ====== */
+/* tambahkan class="flip-rtl" di <svg>/<i> yang menunjuk kiri/kanan */
+html[dir="rtl"] .flip-rtl { transform: scaleX(-1); }
+</style>
 
 </body>
 </html>
