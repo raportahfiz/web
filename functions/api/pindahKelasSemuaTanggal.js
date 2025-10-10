@@ -9,13 +9,16 @@ export async function onRequestPost(ctx){
     const b = await ctx.request.json();
     const kelasAsal   = normKelas(b?.kelasAsal);
     const kelasTujuan = normKelas(b?.kelasTujuan);
-    const nises       = arr(b?.nises);  // = student_key
+    const nisesIn     = arr(b?.nises);   // = student_key
 
     if (!kelasAsal || !kelasTujuan) return jsonErr(400,"Wajib: kelasAsal & kelasTujuan");
     if (kelasAsal === kelasTujuan)  return jsonErr(400,"kelasAsal dan kelasTujuan tidak boleh sama");
-    if (!nises.length)              return jsonErr(400,"Wajib: nises[] (student_key/NIS)");
+    if (!nisesIn.length)            return jsonErr(400,"Wajib: nises[] (student_key/NIS)");
 
-    // Ringkasan (sebelum update)
+    const nises = [...new Set(nisesIn.map(String).filter(Boolean))];
+    const now = nowIso();
+
+    // Ringkasan (sebelum update) untuk feedback UI
     const before = await db.prepare(
       `SELECT tanggal, COUNT(*) AS cnt
          FROM attendance_snapshots
@@ -25,11 +28,9 @@ export async function onRequestPost(ctx){
 
     const details = (before.results||[]).map(r=>({ tanggal:r.tanggal, moved:Number(r.cnt||0) }));
     const totalMoved = details.reduce((a,b)=>a+b.moved,0);
-    const now = nowIso();
 
-    // ====== ANTI-UNIQUE CONFLICT (semua tanggal) ======
     const stmts = [
-      // 1) attendance_snapshots: hapus duplikat di kelasTujuan utk pasangan (tanggal, student_key) yg juga ada di kelasAsal (semua tanggal)
+      // --- attendance_snapshots: hapus duplikat di tujuan ---
       db.prepare(
         `DELETE FROM attendance_snapshots AS t
           WHERE t.class_name = ?
@@ -42,14 +43,14 @@ export async function onRequestPost(ctx){
             )`
       ).bind(kelasTujuan, ...nises, kelasAsal),
 
-      // 2) attendance_snapshots: pindahkan kelasAsal -> kelasTujuan (semua tanggal)
+      // --- attendance_snapshots: pindahkan semua tanggal ---
       db.prepare(
         `UPDATE attendance_snapshots
             SET class_name=?, updated_at=?
           WHERE class_name=? AND student_key IN (${ph(nises.length)})`
       ).bind(kelasTujuan, now, kelasAsal, ...nises),
 
-      // 3) totals_store: hapus target yg bentrok (match start_date,end_date,student_key) di kelasTujuan
+      // --- totals_store: hapus duplikat di tujuan ---
       db.prepare(
         `DELETE FROM totals_store AS t
           WHERE t.kelas = ?
@@ -63,7 +64,7 @@ export async function onRequestPost(ctx){
             )`
       ).bind(kelasTujuan, ...nises, kelasAsal),
 
-      // 4) totals_store: pindahkan kelasAsal -> kelasTujuan (semua periode)
+      // --- totals_store: pindahkan semua periode ---
       db.prepare(
         `UPDATE totals_store
             SET kelas=?, updated_at=?
@@ -71,17 +72,62 @@ export async function onRequestPost(ctx){
       ).bind(kelasTujuan, now, kelasAsal, ...nises),
     ];
 
+    // ==== MURAJAAH (opsional): hanya jika tabelnya ada ====
+    const mur = await detectMurajaah(db);
+    if (mur){
+      // 1) Hapus duplikat di tujuan untuk kombinasi kunci yang sama
+      const delSql = `
+        DELETE FROM ${mur.table} AS t
+         WHERE t.${mur.classCol} = ?
+           AND t.${mur.keyCol} IN (${ph(nises.length)})
+           AND EXISTS (
+             SELECT 1 FROM ${mur.table} s
+              WHERE s.${mur.classCol} = ?
+                AND s.${mur.keyCol}  = t.${mur.keyCol}
+                ${mur.dateCol ? `AND s.${mur.dateCol} = t.${mur.dateCol}` : ``}
+                ${mur.sesiCol ? `AND s.${mur.sesiCol} = t.${mur.sesiCol}` : ``}
+           )
+      `;
+      stmts.push(
+        db.prepare(delSql).bind(kelasTujuan, ...nises, kelasAsal)
+      );
+
+      // 2) Update kelas dari asal -> tujuan (semua tanggal)
+      const updSql = `
+        UPDATE ${mur.table}
+           SET ${mur.classCol}=?, updated_at=?
+         WHERE ${mur.classCol}=? AND ${mur.keyCol} IN (${ph(nises.length)})
+      `;
+      stmts.push(
+        db.prepare(updSql).bind(kelasTujuan, now, kelasAsal, ...nises)
+      );
+    }
+
+    // Eksekusi dalam satu transaksi aman
     await db.batch(stmts);
 
-    return json({ success:true, totalMoved, details, from:kelasAsal, to:kelasTujuan });
+    return json({
+      success:true,
+      totalMoved,
+      details,
+      from:kelasAsal,
+      to:kelasTujuan,
+      murajaahHandled: Boolean(mur)
+    });
+
   }catch(e){
+    console.error("pindahKelasSemuaTanggal error:", e);
     return jsonErr(500, e?.message || String(e));
   }
 }
 
-/* utils */
+/* ================= Utils ================= */
 const nowIso = ()=> new Date().toISOString();
-const normKelas = (k)=> String(k||"").startsWith("kelas_") ? String(k) : `kelas_${k}`;
+const normKelas = (k)=> {
+  let v = String(k||"").trim().replace(/-/g,"_");
+  if (!/^kelas_/.test(v)) v = `kelas_${v}`;
+  return v;
+};
 const json = (o,s=200)=> new Response(JSON.stringify(o), {status:s, headers:hdr()});
 const jsonErr = (s,e,d)=> json({success:false, error:e, ...(d?{detail:d}:{})}, s);
 const hdr = ()=>({
@@ -92,3 +138,31 @@ const hdr = ()=>({
 });
 const arr = (v)=> Array.isArray(v)?v:[];
 const ph = (n)=> Array.from({length:n},()=>"?").join(",");
+
+// Deteksi tabel "murajaah" & kolom-kolom penting secara dinamis
+async function detectMurajaah(db){
+  // cek ada tabel murajaah
+  const t = await db.prepare(
+    `SELECT name FROM sqlite_master WHERE type='table' AND name='murajaah'`
+  ).all();
+  if (!(t.results||[]).length) return null;
+
+  // cek kolom
+  const cols = await db.prepare(`PRAGMA table_info("murajaah")`).all();
+  const C = new Set((cols.results||[]).map(r => String(r.name).toLowerCase()));
+
+  const classCol = C.has("kelas") ? "kelas" : (C.has("class_name") ? "class_name" : null);
+  const keyCol   = C.has("student_key") ? "student_key" : (C.has("nis") ? "nis" : null);
+  const dateCol  = C.has("tanggal") ? "tanggal" : (C.has("date") ? "date" : null);
+  const sesiCol  = C.has("sesi") ? "sesi" : null;
+
+  if (!classCol || !keyCol) return null; // minimal harus ada
+
+  return {
+    table: "murajaah",
+    classCol,
+    keyCol,
+    dateCol,   // optional
+    sesiCol,   // optional
+  };
+}
