@@ -9,18 +9,15 @@ export async function onRequestPost(ctx){
     const b = await ctx.request.json();
     const kelasAsal   = normKelas(b?.kelasAsal);
     const kelasTujuan = normKelas(b?.kelasTujuan);
-    const nisesIn     = arr(b?.nises);        // = student_key / NIS
+    const nises       = arr(b?.nises);        // = student_key
     const start       = String(b?.startDate||"").trim();
 
     if (!kelasAsal || !kelasTujuan) return jsonErr(400,"Wajib: kelasAsal & kelasTujuan");
     if (kelasAsal === kelasTujuan)  return jsonErr(400,"kelasAsal dan kelasTujuan tidak boleh sama");
     if (!/^\d{4}-\d{2}-\d{2}$/.test(start)) return jsonErr(400,"startDate harus YYYY-MM-DD");
-    if (!nisesIn.length) return jsonErr(400,"Wajib: nises[] (student_key/NIS)");
+    if (!nises.length) return jsonErr(400,"Wajib: nises[] (student_key/NIS)");
 
-    const nises = [...new Set(nisesIn.map(String).filter(Boolean))];
-    const now = nowIso();
-
-    // Ringkasan (sebelum update) untuk feedback UI
+    // Ringkasan sebelum update (untuk feedback UI)
     const before = await db.prepare(
       `SELECT tanggal, COUNT(*) AS cnt
          FROM attendance_snapshots
@@ -30,10 +27,11 @@ export async function onRequestPost(ctx){
 
     const details = (before.results||[]).map(r=>({ tanggal:r.tanggal, moved:Number(r.cnt||0) }));
     const totalMoved = details.reduce((a,b)=>a+b.moved,0);
+    const now = nowIso();
 
-    // ====== ANTI-UNIQUE CONFLICT + PEMINDAHAN INTI (attendance & totals) ======
+    // ====== ANTI-UNIQUE CONFLICT: hapus target yg bentrok, lalu UPDATE ======
     const stmts = [
-      // 1) attendance_snapshots: hapus calon duplikat di kelasTujuan (>= start)
+      // 1) attendance_snapshots: hapus baris di kelasTujuan yg (tanggal, student_key) juga ada di kelasAsal (>= start)
       db.prepare(
         `DELETE FROM attendance_snapshots AS t
           WHERE t.class_name = ?
@@ -55,7 +53,7 @@ export async function onRequestPost(ctx){
           WHERE class_name=? AND tanggal>=? AND student_key IN (${ph(nises.length)})`
       ).bind(kelasTujuan, now, kelasAsal, start, ...nises),
 
-      // 3) totals_store: hapus target yg bentrok utk periode yang beririsan (end_date >= start)
+      // 3) totals_store: hapus target yg bentrok (match start_date,end_date,student_key) untuk periode end_date >= start
       db.prepare(
         `DELETE FROM totals_store AS t
           WHERE t.kelas = ?
@@ -79,69 +77,17 @@ export async function onRequestPost(ctx){
       ).bind(kelasTujuan, now, kelasAsal, start, ...nises),
     ];
 
-    // ====== MURAJAAH (opsional): hanya jika tabelnya ada ======
-    const mur = await detectMurajaah(db);
-    if (mur){
-      // 5) murajaah: hapus calon duplikat di tujuan (>= start jika ada kolom tanggal)
-      const delSql = `
-        DELETE FROM ${mur.table} AS t
-         WHERE t.${mur.classCol} = ?
-           AND ${mur.keyCol} IN (${ph(nises.length)})
-           ${mur.dateCol ? `AND t.${mur.dateCol} >= ?` : ``}
-           AND EXISTS (
-             SELECT 1 FROM ${mur.table} s
-              WHERE s.${mur.classCol} = ?
-                AND s.${mur.keyCol}  = t.${mur.keyCol}
-                ${mur.dateCol ? `AND s.${mur.dateCol} = t.${mur.dateCol}` : ``}
-                ${mur.sesiCol ? `AND s.${mur.sesiCol} = t.${mur.sesiCol}` : ``}
-                ${mur.dateCol ? `AND s.${mur.dateCol} >= ?` : ``}
-           )
-      `;
-      const delBind = mur.dateCol
-        ? [kelasTujuan, ...nises, start, kelasAsal, start]
-        : [kelasTujuan, ...nises, kelasAsal];
-      stmts.push(db.prepare(delSql).bind(...delBind));
-
-      // 6) murajaah: UPDATE kelas dari asal -> tujuan (>= start jika ada kolom tanggal)
-      const updSql = `
-        UPDATE ${mur.table}
-           SET ${mur.classCol}=?, updated_at=?
-         WHERE ${mur.classCol}=? 
-           ${mur.dateCol ? `AND ${mur.dateCol} >= ?` : ``}
-           AND ${mur.keyCol} IN (${ph(nises.length)})
-      `;
-      const updBind = mur.dateCol
-        ? [kelasTujuan, now, kelasAsal, start, ...nises]
-        : [kelasTujuan, now, kelasAsal, ...nises];
-      stmts.push(db.prepare(updSql).bind(...updBind));
-    }
-
-    // Eksekusi dalam satu transaksi aman
     await db.batch(stmts);
 
-    return json({
-      success:true,
-      totalMoved,
-      details,
-      from: kelasAsal,
-      to: kelasTujuan,
-      startDate: start,
-      murajaahHandled: Boolean(mur)
-    });
-
+    return json({ success:true, totalMoved, details, from:kelasAsal, to:kelasTujuan, startDate:start });
   }catch(e){
-    console.error("pindahKelasMulaiTanggal error:", e);
     return jsonErr(500, e?.message || String(e));
   }
 }
 
-/* ================= Utils ================= */
+/* utils */
 const nowIso = ()=> new Date().toISOString();
-const normKelas = (k)=> {
-  let v = String(k||"").trim().replace(/-/g,"_");
-  if (!/^kelas_/.test(v)) v = `kelas_${v}`;
-  return v;
-};
+const normKelas = (k)=> String(k||"").startsWith("kelas_") ? String(k) : `kelas_${k}`;
 const json = (o,s=200)=> new Response(JSON.stringify(o), {status:s, headers:hdr()});
 const jsonErr = (s,e,d)=> json({success:false, error:e, ...(d?{detail:d}:{})}, s);
 const hdr = ()=>({
@@ -152,31 +98,3 @@ const hdr = ()=>({
 });
 const arr = (v)=> Array.isArray(v)?v:[];
 const ph = (n)=> Array.from({length:n},()=>"?").join(",");
-
-// Deteksi tabel "murajaah" & kolom-kolom penting secara dinamis
-async function detectMurajaah(db){
-  // cek ada tabel murajaah
-  const t = await db.prepare(
-    `SELECT name FROM sqlite_master WHERE type='table' AND name='murajaah'`
-  ).all();
-  if (!(t.results||[]).length) return null;
-
-  // cek kolom
-  const cols = await db.prepare(`PRAGMA table_info("murajaah")`).all();
-  const C = new Set((cols.results||[]).map(r => String(r.name).toLowerCase()));
-
-  const classCol = C.has("kelas") ? "kelas" : (C.has("class_name") ? "class_name" : null);
-  const keyCol   = C.has("student_key") ? "student_key" : (C.has("nis") ? "nis" : null);
-  const dateCol  = C.has("tanggal") ? "tanggal" : (C.has("date") ? "date" : null);
-  const sesiCol  = C.has("sesi") ? "sesi" : null;
-
-  if (!classCol || !keyCol) return null; // minimal harus ada
-
-  return {
-    table: "murajaah",
-    classCol,
-    keyCol,
-    dateCol,   // optional
-    sesiCol,   // optional
-  };
-}
