@@ -1864,6 +1864,9 @@ function ambilDariStorage() {
   markData = saved ? JSON.parse(saved) : {};
 }
 
+/* ========= HELPER OBJEK ========= */
+function isObj(x){ return x && typeof x === 'object' && !Array.isArray(x); }
+
 /* ========= HITUNG NILAI =========
    - Jika TIDAK ada mark → tampilannya KOSONG (tanpa 0, tanpa predikat, counter kosong) */
 function hitungNilai() {
@@ -1931,6 +1934,9 @@ document.getElementById("btn-beri-nilai").onclick = function() {
   if (warnaEl) warnaEl.innerHTML = `🟩 0 &nbsp; 🟨 0 &nbsp; 🟥 0`;
 
   updateNilaiDiTabel({ nilai: v, predikat: pred });
+  // simpan jejak lokal agar tidak di-overwrite server saat buka lagi
+  if (currentRowEl) currentRowEl.markData = {};
+  try { localStorage.setItem(getStorageKey(), JSON.stringify({ __manual:true })); } catch(e){}
 };
 
 /* ========= UPDATE TABEL ========= */
@@ -1985,6 +1991,9 @@ function buatKataKlik(surah, ayat, teks) {
       span.style.backgroundColor = warnaBaru || "";
       const hasil = hitungNilai();
       updateNilaiDiTabel(hasil);
+      // jejak lokal
+      if (currentRowEl) currentRowEl.markData = JSON.parse(JSON.stringify(markData));
+      try { simpanKeStorage(); } catch(e){}
     };
     if (markData[surah+":"+ayat]?.[idx]) span.style.backgroundColor = markData[surah+":"+ayat][idx];
     return span;
@@ -2021,9 +2030,38 @@ document.addEventListener('click', async function (e) {
   const kelas = document.getElementById('kelas')?.value || 'default';
   const tanggalBaris = row.dataset?.tanggal || document.getElementById('tanggal')?.value || 'default';
 
-  // 1) ambil marks + audio (TAPI TIDAK dirender di overlay ini)
-  let serverMarks = await ambilMarksDariNetlify(currentIdSiswa, kelas, tanggalBaris);
-  markData = (serverMarks && typeof serverMarks === 'object') ? serverMarks : {};
+  /* ===== 1) AMBIL MARKS (PRIORITAS LOKAL → STORAGE → SERVER) ===== */
+  let preferLocal = false;
+
+  if (isObj(currentRowEl.markData)) {
+    markData = JSON.parse(JSON.stringify(currentRowEl.markData));
+    preferLocal = true;
+  } else {
+    const saved = localStorage.getItem(getStorageKey());
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed && parsed.__cleared === true) {
+          markData = {};
+          preferLocal = true; // jangan fetch server
+        } else if (isObj(parsed)) {
+          markData = parsed;
+          preferLocal = true;
+        } else {
+          markData = {};
+        }
+      } catch { markData = {}; }
+    } else {
+      markData = {};
+    }
+  }
+
+  if (!preferLocal) {
+    // baru fetch server bila benar2 tidak ada jejak lokal
+    let serverMarks = await ambilMarksDariNetlify(currentIdSiswa, kelas, tanggalBaris);
+    markData = (serverMarks && typeof serverMarks === 'object') ? serverMarks : {};
+    currentRowEl.markData = JSON.parse(JSON.stringify(markData)); // cache ke baris
+  }
 
   // 2) pastikan data Quran siap
   await dataSiap;
@@ -2081,29 +2119,33 @@ document.addEventListener('click', async function (e) {
   }
 
   // 6) nilai
-  const adaMarkBerwarna = Object.keys(markData).some(k =>
-    k !== 'audio' && markData[k] && typeof markData[k] === 'object' &&
-    Object.values(markData[k]).some(v => v === 'green' || v === 'yellow' || v === 'red')
-  );
   const hasil = (typeof hitungNilai === 'function') ? hitungNilai() : null;
-  if (hasil && adaMarkBerwarna) updateNilaiDiTabel(hasil);
-  else {
-    const ringkas = row.querySelector('.nilai-ringkas');
-    const nilaiEl = document.getElementById('nilai-akhir');
-    const predEl  = document.getElementById('predikat-akhir');
-    if (ringkas && nilaiEl && predEl) {
+
+  // kalau tidak ada mark → JANGAN isi dari ringkasan tabel kecuali benar angka
+  const ringkas = row.querySelector('.nilai-ringkas');
+  const nilaiEl = document.getElementById('nilai-akhir');
+  const predEl  = document.getElementById('predikat-akhir');
+
+  if (ringkas && nilaiEl && predEl) {
+    const ringText = ringkas.textContent.trim();
+    if (ringText === '—' || ringText === '-') {
+      // biarkan kosong
+      nilaiEl.textContent = "";
+      predEl.textContent  = "";
+      const warnaDiv = document.getElementById("modal-mark-warna");
+      if (warnaDiv) warnaDiv.textContent = "";
+    } else {
       const strong = ringkas.querySelector('strong');
       const angka = strong ? parseFloat(String(strong.textContent).replace(',', '.')) : NaN;
       if (!Number.isNaN(angka)) nilaiEl.textContent = angka.toFixed(1);
       const sisa = ringkas.textContent.replace(strong?.textContent || '', '').trim();
-      predEl.innerHTML = sisa || '';  // ← kosong, bukan '-'
-    } else {
-      // jika tidak ada ringkas → tetap kosong
-      if (nilaiEl) nilaiEl.textContent = "";
-      if (predEl)  predEl.textContent  = "";
-      const warnaDiv = document.getElementById("modal-mark-warna");
-      if (warnaDiv) warnaDiv.textContent = "";
+      predEl.innerHTML = sisa || '';
     }
+  } else {
+    if (nilaiEl) nilaiEl.textContent = "";
+    if (predEl)  predEl.textContent  = "";
+    const warnaDiv = document.getElementById("modal-mark-warna");
+    if (warnaDiv) warnaDiv.textContent = "";
   }
 });
 
@@ -2277,9 +2319,9 @@ async function handleRecordedBlobMP3(blob){
 document.getElementById("btn-reset-nilai").addEventListener("click", () => {
   if (!currentIdSiswa) return alert("Buka dulu 'Lembar Penilaian' pada baris santri.");
 
-  // 1) kosongkan state & storage
+  // 1) kosongkan state (dan tandai cleared di storage agar tidak fetch server)
   markData = {};
-  try { localStorage.removeItem(getStorageKey()); } catch(e){}
+  try { localStorage.setItem(getStorageKey(), JSON.stringify({ __cleared:true })); } catch(e){}
 
   // 2) bersihkan highlight pada teks Qur'an
   document.querySelectorAll('#quran-text span[data-key]').forEach(s => {
@@ -2292,13 +2334,14 @@ document.getElementById("btn-reset-nilai").addEventListener("click", () => {
   const warnaEl = document.getElementById("modal-mark-warna");
   const inputManual = document.getElementById("input-nilai-manual");
 
-  if (nilaiEl) nilaiEl.textContent = "";   // ← benar-benar kosong
-  if (predEl)  predEl.textContent  = "";   // ← kosong
-  if (warnaEl) warnaEl.textContent = "";   // ← kosong (tanpa "0")
+  if (nilaiEl) nilaiEl.textContent = "";   // benar-benar kosong
+  if (predEl)  predEl.textContent  = "";   // kosong
+  if (warnaEl) warnaEl.textContent = "";   // kosong (tanpa "0")
   if (inputManual) inputManual.value = "";
 
-  // 4) kosongkan ringkasan di tabel
+  // 4) kosongkan ringkasan di tabel & state baris
   updateNilaiKosongDiTabel();
+  if (currentRowEl) currentRowEl.markData = {}; // prefer lokal
 
   // Catatan untuk tombol "Simpan":
   // - Jika markData {}, dan nilai/predikat kosong → kirim marks = {} (atau hapus field),
