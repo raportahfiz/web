@@ -1676,14 +1676,16 @@ function extendSemesterOptions(selectEl, max = SEMESTER_MAX) {
 
     <div>
       <span id="modal-nama-santri" style="font-weight:bold; font-size:18px;"></span>
-      <span id="nilai-akhir"></span> <span id="predikat-akhir"></span>
+      <span id="nilai-akhir">100</span> — <span id="predikat-akhir">MUMTAZ</span>
     </div>
 
     <!-- Baris aksi nilai + tombol rekam -->
 <div class="manual-actions" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
   <input type="number" id="input-nilai-manual" min="0" max="100" step="0.1" style="width:90px;" placeholder="Nilai Manual">
   <button id="btn-beri-nilai">Acc Nilai Manual</button>
-  <button id="btn-reset-nilai" title="Kembalikan ke kondisi kosong/awal">Reset Nilai</button>
+  <!-- ⬇️ Tombol baru Reset Nilai -->
+  <button id="btn-reset-nilai" class="btn-danger" title="Reset penilaian ke kondisi awal (kosong)">Reset Nilai</button>
+  <!-- ⬆️ Tombol baru -->
   <button id="btn-open-record">Recording</button>
 </div>
 
@@ -1732,6 +1734,11 @@ function extendSemesterOptions(selectEl, max = SEMESTER_MAX) {
       .btn-primary:hover{ filter:brightness(1.05); }
       .btn-secondary{ background:#e9ecef; color:#333; }
       .btn-secondary:hover{ filter:brightness(0.98); }
+
+      /* ⬇️ Gaya tombol Reset Nilai */
+      .btn-danger{ background:#dc3545; color:#fff; }
+      .btn-danger:hover{ filter:brightness(1.05); }
+
       @media (max-width:380px){ .modal-actions{ flex-wrap:wrap; } .modal-actions button{ flex:1 0 100%; } }
     </style>
 
@@ -1889,7 +1896,7 @@ function hitungNilai() {
   let predikat = "-";
   if (adaMark) {
     const p = predikatMap.find(p => nilai <= p.max);
-    const warna = { A: "green", B: "blue", C: "orange", D: "red" };
+    const warna = { A: "green", A: "green", B: "blue", C: "orange", D: "red" };
     predikat = `${p.text} <span style="background-color:${warna[p.huruf]};color:white;padding:0 4px;border-radius:3px;">${p.huruf}</span>`;
   }
   const nilaiEl = document.getElementById("nilai-akhir");
@@ -1899,70 +1906,6 @@ function hitungNilai() {
   const warnaDiv = document.getElementById("modal-mark-warna");
   if (warnaDiv) warnaDiv.innerHTML = `🟩 ${hijau} &nbsp; 🟨 ${kuning} &nbsp; 🟥 ${merah}`;
   return { nilai, predikat, hijau, kuning, merah };
-}
-
-/* ========= RENDER TAMPILAN KOSONG (BENAR-BENAR TANPA NILAI) ========= */
-function renderKosongDiOverlay() {
-  const nilaiEl = document.getElementById("nilai-akhir");
-  const predikatEl = document.getElementById("predikat-akhir");
-  const warnaDiv = document.getElementById("modal-mark-warna");
-  if (nilaiEl) nilaiEl.textContent = "";
-  if (predikatEl) predikatEl.textContent = "";
-  if (warnaDiv) warnaDiv.textContent = "";
-  // bersihkan highlight kata
-  document.querySelectorAll('#quran-text span[data-key]').forEach(sp => sp.style.backgroundColor = "");
-}
-
-/* ========= UPDATE TABEL: MAMPU KOSONG ========= */
-function updateNilaiDiTabel({ nilai, predikat } = {}) {
-  if (!currentIdSiswa) return;
-  let row = currentRowEl || [...document.querySelectorAll("table tbody tr")]
-    .find(r => String(r.cells[0].innerText.trim()) === String(currentIdSiswa));
-  if (!row) return;
-  const cell = [...row.cells].find(td => td.querySelector(".lihat-quran-btn"));
-  if (!cell) return;
-
-  // jika nilai undefined/null/NaN ⇒ tampilkan kondisi awal (tanpa ringkas)
-  if (nilai === undefined || nilai === null || Number.isNaN(Number(nilai))) {
-    cell.innerHTML = `<button class="lihat-quran-btn">Lembar Penilaian</button>`;
-    row.markData = {};
-    return;
-  }
-
-  // render normal ringkas
-  cell.innerHTML = `
-    <div class="nilai-ringkas"><strong>${Number(nilai).toFixed(1)}</strong> ${predikat ?? ""}</div>
-    <button class="lihat-quran-btn">Lembar Penilaian</button>`;
-  row.markData = JSON.parse(JSON.stringify(markData));
-}
-
-/* ========= API: RESET NILAI DI SERVER ========= */
-async function resetNilaiDiServer(id, kelas, tanggal) {
-  const payload = { id, kelas, tanggal };
-
-  // 1) endpoint khusus reset (jika ada)
-  try {
-    const r1 = await fetch('/api/resetMarks', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify(payload)
-    });
-    if (r1.ok) return true;
-  } catch(e){ /* lanjut fallback */ }
-
-  // 2) fallback: pakai saveMarks dengan marks = null (atau {})
-  try {
-    const r2 = await fetch('/api/saveMarks', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ ...payload, marks: null })
-      // server perlu memperlakukan null/{} sebagai "hapus data"
-    });
-    return r2.ok;
-  } catch(e) {
-    console.warn('Reset nilai gagal:', e);
-    return false;
-  }
 }
 
 /* ========= TOMBOL NILAI MANUAL ========= */
@@ -1983,30 +1926,21 @@ document.getElementById("btn-beri-nilai").onclick = function() {
   updateNilaiDiTabel({ nilai: v, predikat: pred });
 };
 
-/* ========= TOMBOL RESET NILAI ========= */
-document.getElementById('btn-reset-nilai').addEventListener('click', async () => {
-  if (!currentIdSiswa) return alert("Klik 'Lembar Penilaian' dulu.");
-
-  if (!confirm("Yakin reset? Nilai dan mark akan DIKOSONGKAN (bukan 0) baik di layar & server.")) return;
-
-  const { kelas, tanggal } = getKelasTanggalAktif();
-
-  // 1) clear state lokal
-  markData = {};
-  try { localStorage.removeItem(getStorageKey()); } catch(e) {}
-
-  // 2) kosongkan overlay
-  renderKosongDiOverlay();
-
-  // 3) kosongkan ringkas pada baris tabel
-  updateNilaiDiTabel({ nilai: undefined, predikat: undefined });
-
-  // 4) kirim ke server agar benar-benar tidak ada data
-  const ok = await resetNilaiDiServer(currentIdSiswa, kelas, tanggal);
-  if (!ok) {
-    alert("Gagal mengosongkan di server. Data di layar sudah kosong, coba ulangi simpan/reset atau periksa koneksi.");
+/* ========= UPDATE TABEL ========= */
+function updateNilaiDiTabel({ nilai, predikat }) {
+  if (!currentIdSiswa) return;
+  let row = currentRowEl || [...document.querySelectorAll("table tbody tr")]
+    .find(r => String(r.cells[0].innerText.trim()) === String(currentIdSiswa));
+  if (row) {
+    const cell = [...row.cells].find(td => td.querySelector(".lihat-quran-btn"));
+    if (cell) {
+      cell.innerHTML = `
+        <div class="nilai-ringkas"><strong>${Number(nilai).toFixed(1)}</strong> ${predikat}</div>
+        <button class="lihat-quran-btn">Lembar Penilaian</button>`;
+      row.markData = JSON.parse(JSON.stringify(markData));
+    }
   }
-});
+}
 
 /* ========= BUAT KATA KLIK ========= */
 function buatKataKlik(surah, ayat, teks) {
@@ -2117,7 +2051,8 @@ document.addEventListener('click', async function (e) {
     halamanMap[page].forEach(item => {
       const spans = buatKataKlik(item.surah, item.ayat, item.teks);
       spans.forEach(span => pageDiv.appendChild(span));
-      pageDiv.appendChild(document.createTextNode(' ')); // spasi antar-ayat
+      // pageDiv.appendChild(document.createElement('br'));   // ❌ hapus baris ini
+      pageDiv.appendChild(document.createTextNode(' '));       // ✅ spasi antar-ayat
     });
 
     quranText.appendChild(pageDiv);
@@ -2139,13 +2074,8 @@ document.addEventListener('click', async function (e) {
       const angka = strong ? parseFloat(String(strong.textContent).replace(',', '.')) : NaN;
       if (!Number.isNaN(angka)) nilaiEl.textContent = angka.toFixed(1);
       const sisa = ringkas.textContent.replace(strong?.textContent || '', '').trim();
-      predEl.innerHTML = sisa || '';
+      predEl.innerHTML = sisa || '-';  /* FIX typo */
     }
-    // fallback: bila memang tidak ada mark sama sekali ⇒ kosong total
-    const tidakAdaMark =
-      !markData || Object.keys(markData).filter(k => k !== 'audio').length === 0 ||
-      !Object.values(markData).some(v => v && typeof v === 'object' && Object.keys(v).length);
-    if (tidakAdaMark) renderKosongDiOverlay();
   }
 });
 
@@ -2314,6 +2244,101 @@ async function handleRecordedBlobMP3(blob){
   // selesai
   recordSpinEl.style.display = 'none';
 }
+
+/* ========= RESET PENILAIAN: UI + STORAGE + SERVER ========= */
+
+/** Hapus semua background warna pada kata2 Qur'an di overlay */
+function bersihkanWarnaQuranOverlay(){
+  const quranText = document.getElementById('quran-text');
+  if (!quranText) return;
+  quranText.querySelectorAll('span[data-key][data-idx]').forEach(sp => {
+    sp.style.backgroundColor = '';
+  });
+}
+
+/** Hapus nilai/predikat dan counter warna di overlay (kosongkan, bukan nol) */
+function kosongkanRingkasanOverlay(){
+  const nilaiEl = document.getElementById("nilai-akhir");
+  const predEl  = document.getElementById("predikat-akhir");
+  const warnaDiv= document.getElementById("modal-mark-warna");
+  if (nilaiEl) nilaiEl.textContent = '';          // ← benar-benar kosong
+  if (predEl)  predEl.innerHTML    = '';          // ← benar-benar kosong
+  if (warnaDiv) warnaDiv.innerHTML = '';          // ← hapus counter
+}
+
+/** Hapus cache lokal untuk santri + kelas + tanggal aktif */
+function hapusLocalStorageMarks(){
+  try{
+    const key = getStorageKey();
+    if (key) localStorage.removeItem(key);
+  }catch(e){ console.warn('Gagal hapus localStorage', e); }
+}
+
+/** Kembalikan sel tabel ke tampilan awal (tanpa nilai-ringkas) */
+function updateTabelKosong(){
+  if (!currentIdSiswa) return;
+  let row = currentRowEl || [...document.querySelectorAll("table tbody tr")]
+    .find(r => String(r.cells[0].innerText.trim()) === String(currentIdSiswa));
+  if (row) {
+    const cell = [...row.cells].find(td => td.querySelector(".lihat-quran-btn") || td.querySelector(".nilai-ringkas"));
+    if (cell) {
+      cell.innerHTML = `<button class="lihat-quran-btn">Lembar Penilaian</button>`;
+      try { delete row.markData; } catch(_){}
+    }
+  }
+}
+
+/** Panggil server untuk mengosongkan data (bukan nol).
+ *  Kontrak: body { id, kelas, tanggal, keepAudio }
+ *  Response: { success:true } atau { success:false, error:"..." }
+ */
+async function resetMarksDiServer(){
+  const { kelas, tanggal } = getKelasTanggalAktif();
+  const payload = { id: String(currentIdSiswa), kelas, tanggal, keepAudio:true };
+
+  const res = await fetch('/api/resetMarks', {
+    method: 'POST',
+    headers: { 'Content-Type':'application/json' },
+    body: JSON.stringify(payload)
+  }).catch(err => ({ ok:false, json: async()=>({ error: String(err) }) }));
+
+  if (!res || !res.ok) {
+    let msg = 'Gagal menghubungi server untuk reset.';
+    try { const j = await res.json(); if (j?.error) msg += ` ${j.error}`; } catch(_){}
+    throw new Error(msg);
+  }
+  const json = await res.json();
+  if (!json?.success) throw new Error(json?.error || 'Reset server gagal.');
+}
+
+/* ==== Event tombol Reset Nilai ==== */
+document.getElementById('btn-reset-nilai').addEventListener('click', async () => {
+  if (!currentIdSiswa) return alert("Buka dulu 'Lembar Penilaian' pada baris santri.");
+
+  const ok = confirm("Reset seluruh penilaian untuk santri ini pada kelas & tanggal aktif?\n- Semua mark hijau/kuning/merah akan dibersihkan\n- Nilai & predikat dikosongkan (bukan 0)\n- Data di server dihapus (kosong)");
+  if (!ok) return;
+
+  // 1) Kosongkan struktur data di memori
+  markData = {};  // benar-benar kosong
+
+  // 2) Bersihkan UI overlay
+  bersihkanWarnaQuranOverlay();
+  kosongkanRingkasanOverlay();
+
+  // 3) Hapus cache lokal
+  hapusLocalStorageMarks();
+
+  // 4) Update tabel menjadi tanpa nilai
+  updateTabelKosong();
+
+  // 5) Kirim ke server (best effort). Jika gagal, UI tetap kosong tapi beri info.
+  try{
+    await resetMarksDiServer();
+  }catch(err){
+    console.warn(err);
+    alert("Reset lokal berhasil, namun server gagal di-update.\nSilakan coba lagi atau periksa endpoint /api/resetMarks.");
+  }
+});
 </script>
 
 
