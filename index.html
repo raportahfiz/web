@@ -1612,9 +1612,12 @@ function extendSemesterOptions(selectEl, max = SEMESTER_MAX) {
     <label>Jenjang:</label><br>
     <select id="inputJenjang" style="width:90%; margin-bottom:10px;">
   <option value=""></option>
-  <option value="A1">1 SMP</option>
-  <option value="A2">2 SMP</option>
-  <option value="A3">3 SMP</option>
+  <option value="A1">1 PDF</option>
+  <option value="A2">2 PDF</option>
+  <option value="A3">3 PDF</option>
+  <option value="A4">1 MA</option>
+  <option value="A5">2 MA</option>
+  <option value="A6">3 MA</option>
   </select>
 
     <div style="margin-top:10px; display:flex; justify-content:space-between; gap:8px;">
@@ -1679,8 +1682,8 @@ function extendSemesterOptions(selectEl, max = SEMESTER_MAX) {
     <!-- Baris aksi nilai + tombol rekam -->
 <div class="manual-actions" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
   <input type="number" id="input-nilai-manual" min="0" max="100" step="0.1" style="width:90px;" placeholder="Nilai Manual">
-  <button id="btn-beri-nilai">Acc</button>
-  <button id="btn-reset-nilai" title="Kosongkan nilai & hapus di server">Reset</button>
+  <button id="btn-beri-nilai">Acc Nilai Manual</button>
+  <button id="btn-reset-nilai" title="Kosongkan nilai & hapus di server">Reset Nilai</button>
   <button id="btn-open-record">Recording</button>
 </div>
 
@@ -2313,11 +2316,12 @@ background:rgba(0,0,0,0.5); z-index:999; justify-content:center; align-items:cen
     </style>
 
     <!-- Bullet list cakep -->
-    <ul class="juz-list"><li>Semester 1: <strong>5</strong> Juz</li>
+    <ul class="juz-list"><li>Semester 1: <strong>8</strong> Juz</li>
       <li>Semester 2: <strong>5</strong> Juz</li>
       <li>Semester 3: <strong>5</strong> Juz</li>
       <li>Semester 4: <strong>5</strong> Juz</li>
-      <li>Semester 5: <strong>10</strong> Juz</li></ul>
+      <li>Semester 5: <strong>5</strong> Juz</li>
+      <li>Semester 6: <strong>10</strong> Juz</li></ul>
 
     <hr style="border:none; border-top:1px solid #eee; margin:8px 0 12px;">
 
@@ -2591,9 +2595,31 @@ background:rgba(0,0,0,0.5); z-index:999; justify-content:center; align-items:cen
 
   // === Fungsi atur dropdown kelas ===
 function aturDropdownKelas(user) {
-  const semuaKelas = [  "kelas_012027"];
+  const semuaKelas = [  "kelas_012526","kelas_022526","kelas_032526","kelas_042526","kelas_052526","kelas_062526",
+    "kelas_072526","kelas_082526","kelas_092526","kelas_102526","kelas_112526","kelas_122526",
+    "kelas_132526","kelas_142526","kelas_152526","kelas_162526","kelas_172526","kelas_182526",
+    "kelas_192526","kelas_202526"];
 
-  const namaKelasCustom = {  kelas_012027: "Ustadz Ahmad"};
+  const namaKelasCustom = {  kelas_012526: "Ustadzah Lylika Tri Canda Medita",
+  kelas_022526: "Ustadzah Dewi Khumariah Rhasya",
+  kelas_032526: "Ustadzah Nadia Nurfadhilah",
+  kelas_042526: "Ustadzah Eliya",
+  kelas_052526: "Ustadzah Rima Karimah",
+  kelas_062526: "Ustadzah Rishana Hanifa",
+  kelas_072526: "Ustadzah Karimah",
+  kelas_082526: "Ustadzah Nurfadhilah Kamaliyah",
+  kelas_092526: "Ustadzah Umi Muthoharoh",
+  kelas_102526: "Ustadzah Sofi Agnia",
+  kelas_112526: "Ustadzah Ririn Nurlaily",
+  kelas_122526: "Ustadzah Zihan Audrian Hidayat",
+  kelas_132526: "Ustadzah Nopia",
+  kelas_142526: "Ustadz Imam Tolhah",
+  kelas_152526: "Ustadz Fahri Aziz",
+  kelas_162526: "Ustadz Saeful Munawar Rizal",
+  kelas_172526: "Ustadz Aflah Musoddaq",
+  kelas_182526: "Ustadz Saif Abdullah",
+  kelas_192526: "Ustadz Muhammad Farhan Hidayat",
+  kelas_202526: "Ustadz Farrid Ilallah"};
 
   kelasSelect.innerHTML = "";
 
@@ -2772,9 +2798,9 @@ logoutBtn.addEventListener("click", () => {
   // Konfigurasi global yang bisa dioverride sebelum loadSantriData jalan
   window.ABS_FLEX_CFG = window.ABS_FLEX_CFG || {
     statuses: ["hadir","izin","sakit","alpha"],
-    perStatus: Number(window.ABS_FLEX_PER_STATUS ?? 6), // default 1 sesi, bisa 6..4
-    defaultTarget: 1,                                   // default denominator
-    maxTarget: 4,                                       // denominator 1..6
+    perStatus: Number(window.ABS_FLEX_PER_STATUS ?? 4), // default 4 sesi, bisa 1..6
+    defaultTarget: 4,                                   // default denominator
+    maxTarget: 6,                                       // denominator 1..6
     labels: null                                        // {hadir:[...], izin:[...], ...] (opsional)
   };
 
@@ -3211,7 +3237,7 @@ async function loadSantriData() {
   overlay.style.display = "flex";
 
   // ===== util jenjang (tetap) =====
-  const JENJANG_MAX = Number(window.JENJANG_MAX ?? 3);
+  const JENJANG_MAX = Number(window.JENJANG_MAX ?? 9);
 
   const parseJenjang = (v) => {
     const m = /^A(\d+)$/.exec(String(v || "").trim());
@@ -3646,9 +3672,12 @@ async function loadSantriData() {
           <td class="col-nama">${santri.nama ?? ""}${subTanggal}</td>
           <td>
             <select class="jenjang">
-    <option value="A1" ${jenNow === 'A1' ? 'selected' : ''}>1 SMP</option>
-    <option value="A2" ${jenNow === 'A2' ? 'selected' : ''}>2 SMP</option>
-    <option value="A3" ${jenNow === 'A3' ? 'selected' : ''}>3 SMP</option>
+    <option value="A1" ${jenNow === 'A1' ? 'selected' : ''}>1 PDF</option>
+    <option value="A2" ${jenNow === 'A2' ? 'selected' : ''}>2 PDF</option>
+    <option value="A3" ${jenNow === 'A3' ? 'selected' : ''}>3 PDF</option>
+    <option value="A4" ${jenNow === 'A4' ? 'selected' : ''}>1 MA</option>
+    <option value="A5" ${jenNow === 'A5' ? 'selected' : ''}>2 MA</option>
+    <option value="A6" ${jenNow === 'A6' ? 'selected' : ''}>3 MA</option>
   </select>
           </td>
           <td>
@@ -3672,7 +3701,6 @@ async function loadSantriData() {
     <option value="" ${!ketNow ? 'selected' : ''}></option>
     <option value="SP1" ${ketNow === 'SP1' ? 'selected' : ''}>SP1</option>
     <option value="SP2" ${ketNow === 'SP2' ? 'selected' : ''}>SP2</option>
-    <option value="SP3" ${ketNow === 'SP3' ? 'selected' : ''}>SP3</option>
   </select>
           </td>
           <td>
@@ -4767,7 +4795,30 @@ document.getElementById('mur-save')?.addEventListener('click', function(){ simpa
   // === Helper Kelas/Kelompok ===
 function buildKelasKelompokLine(kelas, kelasEl) {
   const kelasNum = (String(kelas||'').match(/(\d+)/)?.[1]) || (kelas || '-');
-  const custom = window.namaKelasCustom || window.NAMA_KELAS_CUSTOM || {  kelas_012027: "Ust. Ahmad"};
+  const custom = window.namaKelasCustom || window.NAMA_KELAS_CUSTOM || {  kelas_012526: "Ust. Tukimin",
+  kelas_022526: "Ust. Dicky Miswardi",
+  kelas_032526: "Ust. Jundullah BA",
+  kelas_042526: "Ust. Abdullah",
+  kelas_052526: "Ust. Ro'uuf Noor Huda Su'udin",
+  kelas_062526: "Ust. Salahuddin Santoaji P",
+  kelas_072526: "Ust. Hammam Ahmed Saleh",
+  kelas_082526: "Ust. Alif Rafiqul",
+  kelas_092526: "Ust. Ali Wardana",
+  kelas_102526: "Ust. Mullah Muhammad Umar",
+  kelas_112526: "Ust. Akhsani Tawqim",
+  kelas_122526: "Ust. Ikhsan Nur Kamidin",
+  kelas_132526: "Ust. Abdul Haq",
+  kelas_142526: "Ust. Abdullah Al Guspari",
+  kelas_152526: "Ust. Abdullah Rafi",
+  kelas_162526: "Ust. Fajriul Ihsan",
+  kelas_172526: "Ust. Idris",
+  kelas_182526: "Ust. Muhammad Athayya Mumtaz",
+  kelas_192526: "Ust. M. Hanan Azili",
+  kelas_202526: "Ust. Muhammad Rama Miayasin",
+  kelas_212526: "Ust. Nur Afiq",
+  kelas_222526: "Ust. Raditya Baswara Raharjo",
+  kelas_232526: "Ust. Rafie Zahran Kurniawan",
+  kelas_242526: "Ust. Shidiq Hasan Khan"};
     let kelompok = custom[kelas] || "";
     if (!kelompok) {
       const optText = kelasEl?.options?.[kelasEl.selectedIndex]?.text?.trim() || "";
@@ -5468,7 +5519,7 @@ window.PDF_joinRangeSegmentsCompact = PDF_joinRangeSegmentsCompact;
       const rightX = margin.left + colW + colGap;
 
       doc.setFont('helvetica','normal'); doc.setFontSize(11);
-      doc.text(`Jakarta, ${ttdDate}`, margin.left + totalW, y, { align:'right' });
+      doc.text(`Tengaran, ${ttdDate}`, margin.left + totalW, y, { align:'right' });
 
       const headY = y + 8;
       doc.text('Mengetahui,', leftX, headY);
@@ -5904,7 +5955,7 @@ window.PDF_joinRangeSegmentsCompact = PDF_joinRangeSegmentsCompact;
       const rightX = margin.left + colW + colGap;
 
       doc.setFont('helvetica','normal'); doc.setFontSize(11);
-      doc.text(`Jakarta, ${ttdDate}`, margin.left + totalW, y, { align:'right' });
+      doc.text(`Tengaran, ${ttdDate}`, margin.left + totalW, y, { align:'right' });
 
       const headY = y + 8;
       doc.text('Mengetahui,', leftX, headY);
@@ -6218,7 +6269,7 @@ async function xlsRekapDownload(){
     return out.length ? out.join(', ') : '-';
   }
   function PDF_percentCapaian(totalJuzNum, semester){
-    const batasSemester = {1: 5, 2: 10, 3: 15, 4: 20, 5: 30};
+    const batasSemester = {1: 8, 2: 5, 3: 5, 4: 5, 5: 5, 6: 2};
     const total = Number(totalJuzNum);
     const sem   = Number(semester);
     if (!Number.isFinite(total)) return 0;
@@ -6869,7 +6920,7 @@ async function pdfSantriDownload(){
     const rightX = margin.left + colW + colGap;
 
     doc.setFont('helvetica','normal'); doc.setFontSize(11);
-    doc.text(`Jakarta, ${ttdDate}`, margin.left + totalW, y, { align:'right' });
+    doc.text(`Tengaran, ${ttdDate}`, margin.left + totalW, y, { align:'right' });
 
     const headY = y + 8;
     doc.text('Mengetahui,', leftX, headY);
@@ -8812,7 +8863,7 @@ if (window.currentRowEl){
 
 <script>
   // ====== KONFIG (opsional dari window.*) ======
-  const JENJANG_MAX = Number(window.JENJANG_MAX ?? 3);             // 34 default; 0 = tanpa batas atas
+  const JENJANG_MAX = Number(window.JENJANG_MAX ?? 9);             // 34 default; 0 = tanpa batas atas
   const JENJANG_SAFETY_CAP = Number(window.JENJANG_SAFETY_CAP ?? 1000); // darurat bila tanpa batas
 
   // ====== Helper jenjang dinamis ======
@@ -9854,7 +9905,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // ==== BARU: ABSENSI FLEX (4 elemen) ====
     {key:'ABS_PER_STATUS',    label:'24) ABS Flex — perStatus (1..6)',                     editable:true,  required:true},
     {key:'ABS_DEFAULT_TARGET',label:'25) ABS Flex — defaultTarget (1..6)',                 editable:true,  required:true},
-    {key:'ABS_MAX_TARGET',    label:'26) ABS Flex — maxTarget (1..6)',                     editable:true,  required:true},
+    // {key:'ABS_MAX_TARGET',    label:'26) ABS Flex — maxTarget (1..6)',                     editable:true,  required:true},
     {key:'ABS_SESI_ALL',      label:'27) ABS Flex — sesiAll (array ["Subuh","Pagi",...])', editable:true,  required:true},
   ];
   const ITEM = Object.fromEntries(ITEMS.map(i=>[i.key,i]));
@@ -10079,10 +10130,6 @@ document.addEventListener("DOMContentLoaded", () => {
     // perStatus: Number(window.ABS_FLEX_PER_STATUS ?? 6)
     return byRegex(/window\.ABS_FLEX_CFG\s*=\s*window\.ABS_FLEX_CFG\s*\|\|\s*{[\s\S]{0,5000}?perStatus\s*:\s*Number\(\s*window\.ABS_FLEX_PER_STATUS\s*\?\?\s*(\d+)\s*\)/i);
   }
-  function findAbsFlexDefaultTarget(){
-    // defaultTarget: 6
-    return byRegex(/window\.ABS_FLEX_CFG[\s\S]{0,5000}?defaultTarget\s*:\s*(\d+)/i);
-  }
   function findAbsFlexMaxTarget(){
     // maxTarget: 6
     return byRegex(/window\.ABS_FLEX_CFG[\s\S]{0,5000}?maxTarget\s*:\s*(\d+)/i);
@@ -10191,7 +10238,6 @@ document.addEventListener("DOMContentLoaded", () => {
       // ABS FLEX
       case 'ABS_PER_STATUS':     return findAbsFlexPerStatus();
       case 'ABS_DEFAULT_TARGET': return findAbsFlexDefaultTarget();
-      case 'ABS_MAX_TARGET':     return findAbsFlexMaxTarget();
       case 'ABS_SESI_ALL':       return findAbsFlexSesiAll();
     }
     return null;
@@ -10367,21 +10413,15 @@ document.addEventListener("DOMContentLoaded", () => {
         continue;
       }
 
-      // === ABS FLEX (angka 1..6) ===
-      if (key==='ABS_PER_STATUS' || key==='ABS_DEFAULT_TARGET' || key==='ABS_MAX_TARGET'){
-        const trimmed = String(view||'').trim();
-        const num = Number(trimmed);
-        if (!Number.isInteger(num) || num<1 || num>6) return {error:`${rules.label||key}: masukkan bilangan bulat 1..6.`};
-        tasks.push({start:seg.start, end:seg.end, content:String(num)});
-        continue;
-      }
-      // === ABS FLEX sesiAll (array literal) ===
-      if (key==='ABS_SESI_ALL'){
-        const txt = String(view||'').trim();
-        if (!/^\[\s*[\s\S]*\]\s*$/.test(txt)) return {error:`${rules.label||key}: isi harus array literal, contoh: ["Subuh","Pagi","Siang","Sore","Malam","Tahajjud"]`};
-        tasks.push({start:seg.start, end:seg.end, content:txt});
-        continue;
-      }
+      // === ABS FLEX (angka 1..6) — hanya 2 kunci ===
+if (key==='ABS_PER_STATUS' || key==='ABS_DEFAULT_TARGET'){
+  const trimmed = String(view||'').trim();
+  const num = Number(trimmed);
+  if (!Number.isInteger(num) || num<1 || num>6)
+    return {error:`${rules.label||key}: masukkan bilangan bulat 1..6.`};
+  tasks.push({start:seg.start, end:seg.end, content:String(num)});
+  continue;
+}
     }
 
     if (notFound.length) return {error:`Bagian tidak ditemukan: ${notFound.join(', ')}`};
