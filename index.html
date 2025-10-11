@@ -1659,27 +1659,33 @@ function extendSemesterOptions(selectEl, max = SEMESTER_MAX) {
     </div>
 
     <!-- Area teks Al-Qur'an -->
-    <div id="quran-text" style="
-      direction:rtl; font-size:30px; line-height:2.2;
-      text-align:justify; text-align-last:right; text-justify:inter-word;
-      white-space:normal;
-      flex:1 1 auto; overflow:auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; scrollbar-gutter:stable;
-    "></div>
+<div id="quran-text" style="
+  direction:rtl; font-size:30px; line-height:2.2;
+
+  /* kunci justify */
+  text-align:justify;
+  text-align-last:right;
+  text-justify:inter-word;
+  white-space:normal;  /* ← ganti dari pre-wrap */
+
+  flex:1 1 auto; overflow:auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; scrollbar-gutter:stable;
+"></div>
+
 
     <hr>
 
     <div>
       <span id="modal-nama-santri" style="font-weight:bold; font-size:18px;"></span>
-      <span id="nilai-akhir"></span> <span id="strip-separator" style="display:none;">—</span> <span id="predikat-akhir"></span>
+      <span id="nilai-akhir">100</span> — <span id="predikat-akhir">MUMTAZ</span>
     </div>
 
     <!-- Baris aksi nilai + tombol rekam -->
-    <div class="manual-actions" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-      <input type="number" id="input-nilai-manual" min="0" max="100" step="0.1" style="width:90px;" placeholder="Nilai Manual">
-      <button id="btn-beri-nilai">Acc Nilai Manual</button>
-      <button id="btn-reset-nilai" style="background:#ffecec; border:1px solid #ffb4b4; border-radius:6px; padding:6px 10px; cursor:pointer;">Reset Nilai</button>
-      <button id="btn-open-record">Recording</button>
-    </div>
+<div class="manual-actions" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+  <input type="number" id="input-nilai-manual" min="0" max="100" step="0.1" style="width:90px;" placeholder="Nilai Manual">
+  <button id="btn-beri-nilai">Acc Nilai Manual</button>
+  <button id="btn-reset-nilai" title="Kosongkan nilai & hapus di server">Reset Nilai</button>
+  <button id="btn-open-record">Recording</button>
+</div>
 
     <style>
       .keterangan-row{
@@ -1819,27 +1825,6 @@ async function ambilMarksDariNetlify(id, kelas, tanggal) {
   }
 }
 
-/* ========= RESET NILAI DI SERVER =========
-   Pastikan endpoint ini Anda sediakan di server:
-   POST /api/resetNilai  body: { id, kelas, tanggal }
-   Tugas server: hapus nilai & marks (kosong/null), boleh biarkan audio tetap ada.
-*/
-async function resetNilaiServer() {
-  try{
-    const { kelas, tanggal } = getKelasTanggalAktif();
-    const res = await fetch('/api/resetNilai', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ id: currentIdSiswa, kelas, tanggal })
-    });
-    // tidak wajib cek isi; UI tetap dibersihkan walau gagal
-    return res.ok;
-  }catch(e){
-    console.warn('Reset di server gagal/terlewat:', e);
-    return false;
-  }
-}
-
 /* ========= AUDIO: UTIL MIME ========= */
 function getMimeType(filename) {
   const ext = filename.split('.').pop().toLowerCase();
@@ -1879,10 +1864,6 @@ function ambilDariStorage() {
   const saved = localStorage.getItem(getStorageKey());
   markData = saved ? JSON.parse(saved) : {};
 }
-function hapusStorage() {
-  if (!currentIdSiswa) return;
-  localStorage.removeItem(getStorageKey());
-}
 
 /* ========= HITUNG NILAI ========= */
 function hitungNilai() {
@@ -1913,12 +1894,10 @@ function hitungNilai() {
   }
   const nilaiEl = document.getElementById("nilai-akhir");
   const predikatEl = document.getElementById("predikat-akhir");
-  const sepEl = document.getElementById("strip-separator");
-  if (nilaiEl) nilaiEl.innerText = adaMark ? nilai.toFixed(1) : "";
-  if (predikatEl) predikatEl.innerHTML = adaMark ? predikat : "";
-  if (sepEl) sepEl.style.display = adaMark ? "inline" : "none";
+  if (nilaiEl) nilaiEl.innerText = nilai.toFixed(1);
+  if (predikatEl) predikatEl.innerHTML = predikat;
   const warnaDiv = document.getElementById("modal-mark-warna");
-  if (warnaDiv) warnaDiv.innerHTML = adaMark ? `🟩 ${hijau} &nbsp; 🟨 ${kuning} &nbsp; 🟥 ${merah}` : "";
+  if (warnaDiv) warnaDiv.innerHTML = `🟩 ${hijau} &nbsp; 🟨 ${kuning} &nbsp; 🟥 ${merah}`;
   return { nilai, predikat, hijau, kuning, merah };
 }
 
@@ -1927,6 +1906,7 @@ document.getElementById("btn-beri-nilai").onclick = function() {
   if (!currentIdSiswa) return alert("Klik 'Lembar Penilaian' dulu.");
   const v = parseFloat(document.getElementById("input-nilai-manual").value);
   if (isNaN(v) || v < 0 || v > 100) return alert("Masukkan Nilai Manual dari 0 sampai 100.");
+
   let pred = "-";
   if (v <= 59) pred = "ROSIB (D)";
   else if (v <= 69) pred = "MAQBUL (C)";
@@ -1934,89 +1914,70 @@ document.getElementById("btn-beri-nilai").onclick = function() {
   else if (v <= 89) pred = "JAYYID JIDDAN (A)";
   else pred = "MUMTAZ PLUS (A)";
 
-  // kosongkan mark warna saat memakai nilai manual (pilihan desain)
-  markData = {};
+  // Nilai manual tidak menghapus audio
+  const audioKeep = Array.isArray(markData.audio) ? { audio: [...markData.audio] } : {};
+  markData = { ...audioKeep };
 
-  // set UI nilai
   document.getElementById("nilai-akhir").innerText = v.toFixed(1);
   document.getElementById("predikat-akhir").innerText = pred;
-  document.getElementById("strip-separator").style.display = "inline";
   document.getElementById("modal-mark-warna").innerHTML = `🟩 0 &nbsp; 🟨 0 &nbsp; 🟥 0`;
 
   updateNilaiDiTabel({ nilai: v, predikat: pred });
-  simpanKeStorage();
+
+  // Matikan flag reset jika sebelumnya diaktifkan
+  if (currentRowEl) {
+    delete currentRowEl.dataset.resetNilai;
+    const cell = [...currentRowEl.cells].find(td => td.querySelector(".lihat-quran-btn"));
+    if (cell) delete cell.dataset.resetNilai;
+  }
 };
 
 /* ========= TOMBOL RESET NILAI ========= */
-document.getElementById("btn-reset-nilai").onclick = async function() {
+document.getElementById("btn-reset-nilai").onclick = function () {
   if (!currentIdSiswa) return alert("Klik 'Lembar Penilaian' dulu.");
-  const ya = confirm("Reset nilai & marks menjadi KOSONG (bukan 0)?");
-  if (!ya) return;
 
-  // 1) Hapus di server (jika endpoint tersedia)
-  await resetNilaiServer();
-
-  // 2) Bersihkan state lokal (nilai, predikat, marks, counter)
-  markData = {};
-  hapusStorage();
-
-  // kosongkan tampilan nilai (benar2 kosong)
+  // 1) Kosongkan tampilan di overlay
   const nilaiEl = document.getElementById("nilai-akhir");
   const predEl  = document.getElementById("predikat-akhir");
-  const sepEl   = document.getElementById("strip-separator");
   const warnaEl = document.getElementById("modal-mark-warna");
-  if (nilaiEl) nilaiEl.innerText = "";
-  if (predEl)  predEl.innerHTML = "";
-  if (sepEl)   sepEl.style.display = "none";
-  if (warnaEl) warnaEl.innerHTML = "";
+  const inputManual = document.getElementById("input-nilai-manual");
 
-  // 3) Bersihkan highlight kata di overlay Qur'an
-  try {
-    const quranText = document.getElementById('quran-text');
-    if (quranText) {
-      quranText.querySelectorAll('span[data-key][data-idx]').forEach(sp => {
-        sp.style.backgroundColor = "";
-      });
+  if (nilaiEl) nilaiEl.textContent = "";      // benar-benar kosong
+  if (predEl)  predEl.innerHTML   = "";       // benar-benar kosong
+  if (warnaEl) warnaEl.innerHTML  = "";       // kosongkan counter
+  if (inputManual) inputManual.value = "";
+
+  // 2) Bersihkan kolom tabel (hapus .nilai-ringkas, sisakan tombol)
+  let row = currentRowEl || [...document.querySelectorAll("table tbody tr")]
+    .find(r => String(r.cells[0].innerText.trim()) === String(currentIdSiswa));
+  if (row) {
+    const cell = [...row.cells].find(td => td.querySelector(".lihat-quran-btn"));
+    if (cell) {
+      cell.innerHTML = `<button class="lihat-quran-btn">Lembar Penilaian</button>`;
+      cell.dataset.resetNilai = "1";
     }
-  } catch(e){}
+    row.dataset.resetNilai = "1";
+  }
 
-  // 4) Kembalikan kolom tabel seperti semula (tanpa nilai-ringkas)
-  resetNilaiDiTabel();
-
-  // 5) Kosongkan input manual
-  const inp = document.getElementById("input-nilai-manual");
-  if (inp) inp.value = "";
-
-  alert("Nilai & marks sudah direset menjadi KOSONG.");
+  // (opsional) alert('Nilai dikosongkan. Klik "Simpan" untuk menerapkan ke server.');
 };
 
-/* ========= UPDATE & RESET TABEL ========= */
+/* ========= UPDATE TABEL ========= */
 function updateNilaiDiTabel({ nilai, predikat }) {
   if (!currentIdSiswa) return;
   let row = currentRowEl || [...document.querySelectorAll("table tbody tr")]
     .find(r => String(r.cells[0].innerText.trim()) === String(currentIdSiswa));
-  if (row) {
-    const cell = [...row.cells].find(td => td.querySelector(".lihat-quran-btn"));
-    if (cell) {
-      cell.innerHTML = `
-        <div class="nilai-ringkas"><strong>${Number(nilai).toFixed(1)}</strong> ${predikat}</div>
-        <button class="lihat-quran-btn">Lembar Penilaian</button>`;
-      row.markData = JSON.parse(JSON.stringify(markData));
-    }
-  }
-}
+  if (!row) return;
 
-function resetNilaiDiTabel() {
-  if (!currentIdSiswa) return;
-  let row = currentRowEl || [...document.querySelectorAll("table tbody tr")]
-    .find(r => String(r.cells[0].innerText.trim()) === String(currentIdSiswa));
-  if (row) {
-    const cell = [...row.cells].find(td => td.querySelector(".lihat-quran-btn"));
-    if (cell) {
-      // HANYA tombol, tanpa nilai-ringkas (bersih)
-      cell.innerHTML = `<button class="lihat-quran-btn">Lembar Penilaian</button>`;
-      delete row.markData;
-    }
+  // Jika mode reset aktif → jangan tulis nilai ringkas
+  if (row.dataset.resetNilai === "1") return;
+
+  const cell = [...row.cells].find(td => td.querySelector(".lihat-quran-btn"));
+  if (cell) {
+    cell.innerHTML = `
+      <div class="nilai-ringkas"><strong>${Number(nilai).toFixed(1)}</strong> ${predikat}</div>
+      <button class="lihat-quran-btn">Lembar Penilaian</button>`;
+    row.markData = JSON.parse(JSON.stringify(markData));
   }
 }
 
@@ -2039,9 +2000,7 @@ function buatKataKlik(surah, ayat, teks) {
       else delete markData[surah+":"+ayat][idx];
       span.style.backgroundColor = warnaBaru || "";
       const hasil = hitungNilai();
-      // Jika tidak ada mark warna lagi, tabel akan kosong saat disimpan/manual reset saja.
-      if (hasil) updateNilaiDiTabel(hasil);
-      simpanKeStorage();
+      updateNilaiDiTabel(hasil);
     };
     if (markData[surah+":"+ayat]?.[idx]) span.style.backgroundColor = markData[surah+":"+ayat][idx];
     return span;
@@ -2131,7 +2090,7 @@ document.addEventListener('click', async function (e) {
     halamanMap[page].forEach(item => {
       const spans = buatKataKlik(item.surah, item.ayat, item.teks);
       spans.forEach(span => pageDiv.appendChild(span));
-      pageDiv.appendChild(document.createTextNode(' '));
+      pageDiv.appendChild(document.createTextNode(' '));       // spasi antar-ayat
     });
 
     quranText.appendChild(pageDiv);
@@ -2142,30 +2101,23 @@ document.addEventListener('click', async function (e) {
     k !== 'audio' && markData[k] && typeof markData[k] === 'object' &&
     Object.values(markData[k]).some(v => v === 'green' || v === 'yellow' || v === 'red')
   );
-  if (adaMarkBerwarna) {
-    const hasil = (typeof hitungNilai === 'function') ? hitungNilai() : null;
-    if (hasil) updateNilaiDiTabel(hasil);
+  const hasil = (typeof hitungNilai === 'function') ? hitungNilai() : null;
+  if (hasil && adaMarkBerwarna) {
+    updateNilaiDiTabel(hasil);
   } else {
-    // Tidak ada mark -> kosongkan tampilan nilai (bukan 0)
     const ringkas = row.querySelector('.nilai-ringkas');
     const nilaiEl = document.getElementById('nilai-akhir');
     const predEl  = document.getElementById('predikat-akhir');
-    const sepEl   = document.getElementById('strip-separator');
-    if (nilaiEl) nilaiEl.textContent = "";
-    if (predEl)  predEl.innerHTML = "";
-    if (sepEl)   sepEl.style.display = "none";
-
-    // Jika tabel punya nilai-ringkas (mis. manual sebelumnya), tampilkan ke modal;
-    // jika tidak ada, biarkan kosong
     if (ringkas && nilaiEl && predEl) {
       const strong = ringkas.querySelector('strong');
       const angka = strong ? parseFloat(String(strong.textContent).replace(',', '.')) : NaN;
-      if (!Number.isNaN(angka)) {
-        nilaiEl.textContent = angka.toFixed(1);
-        document.getElementById('strip-separator').style.display = "inline";
-        const sisa = ringkas.textContent.replace(strong?.textContent || '', '').trim();
-        predEl.innerHTML = sisa || '';
-      }
+      if (!Number.isNaN(angka)) nilaiEl.textContent = angka.toFixed(1);
+      const sisa = ringkas.textContent.replace(strong?.textContent || '', '').trim();
+      predEl.innerHTML = sisa || '';
+    } else {
+      // tidak ada ringkas dan tidak ada mark → kosongkan overlay
+      if (nilaiEl) nilaiEl.textContent = '';
+      if (predEl)  predEl.innerHTML    = '';
     }
   }
 });
@@ -2336,7 +2288,6 @@ async function handleRecordedBlobMP3(blob){
   recordSpinEl.style.display = 'none';
 }
 </script>
-
 
 
 <!-- Overlay Hitung Total All Juz -->
@@ -4281,15 +4232,14 @@ tanggalInput.addEventListener("change", loadSantriData);
 // A. LOAD SANTRI DATA
 // ============================
 // ====== SIMPAN DATA MUTABAAH ======
-// ====== SIMPAN DATA MUTABAAH ====== 
 async function simpanDataMutabaah(saveBtn){
 
-try {
+  try {
     if (window.currentRowEl && typeof window.renderSession === 'function') {
       [1,2,3].forEach(i => window.renderSession(i));
     }
   } catch(_) {}
-	
+  
   const rows  = document.querySelectorAll('#santri-table tbody tr');
 
   function resolveKelas(){
@@ -4485,12 +4435,21 @@ try {
         const nilaiCell = row.querySelector(".lihat-quran-btn")?.parentElement;
         const nilaiStr  = nilaiCell?.querySelector("div:nth-child(1)")?.innerText?.trim()||"";
         const parsed    = parseNilaiStr(nilaiStr);
+
+        // DETEKSI MODE RESET dari DOM (baik di <tr> maupun di cell)
+        const resetFlag = (row.dataset?.resetNilai === "1") ||
+                          (nilaiCell && nilaiCell.dataset?.resetNilai === "1");
+
         let buttonCell;
-        if (typeof parsed.nilai==="number" && !Number.isNaN(parsed.nilai)){
+        if (resetFlag) {
+          buttonCell = null; // paksa kosong di server
+        } else if (typeof parsed.nilai==="number" && !Number.isNaN(parsed.nilai)){
           const predikatText  =(parsed.predikatText && parsed.predikatText!=='-') ? parsed.predikatText : (existing?.buttonCell?.predikatText ?? "-");
           const predikatHuruf =(parsed.predikatHuruf && parsed.predikatHuruf!=='-') ? parsed.predikatHuruf : (existing?.buttonCell?.predikatHuruf ?? "-");
           buttonCell = { nilai: parsed.nilai, predikatText, predikatHuruf };
-        } else if (existing?.buttonCell) { buttonCell=existing.buttonCell; }
+        } else if (existing?.buttonCell) {
+          buttonCell = existing.buttonCell;
+        }
 
         const base = {
           ...existing,
@@ -4555,10 +4514,18 @@ try {
           // total murajaah: 0.00 saat reset
           juzmurajaah: (mur.total!=null ? mur.total : Number(parseNum(existing?.juzmurajaah||0).toFixed?.(2) ?? 0)),
 
+          // simpan marks (audio tetap dipertahankan)
           marks: (row.markData && typeof row.markData === 'object') ? row.markData : (existing?.marks || { audio: [] })
         };
 
-        const newData = buttonCell ? { ...base, buttonCell } : base;
+        // Jika reset nilai → benar-benar hapus field nilai dari payload
+        if (resetFlag) {
+          delete base.buttonCell;
+          delete base.nilai;
+          delete base.predikat;
+        }
+
+        const newData = (resetFlag || !buttonCell) ? { ...base } : { ...base, buttonCell };
 
         const idx = dataMerged.findIndex(d=>String(d.id)===String(id));
         if (idx!==-1) dataMerged[idx]=newData;
@@ -4678,6 +4645,14 @@ try {
         if (ad) window.fillAyatOptionsMarked(ad, sd?.value||"", ad.value||"");
         if (as) window.fillAyatOptionsMarked(as, ss?.value||"", as.value||"");
       });
+
+      // setelah sukses simpan, bersihkan flag reset
+      document.querySelectorAll('#santri-table tbody tr[data-reset-nilai="1"]').forEach(tr => {
+        delete tr.dataset.resetNilai;
+        const cell = [...tr.cells].find(td => td.querySelector(".lihat-quran-btn"));
+        if (cell) delete cell.dataset.resetNilai;
+      });
+
     }else{
       const daftar=gagal.map(g=>g.tanggal).join(', ');
       alert(`❌ Sebagian tanggal gagal disimpan: ${daftar}`);
