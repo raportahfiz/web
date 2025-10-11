@@ -1659,35 +1659,27 @@ function extendSemesterOptions(selectEl, max = SEMESTER_MAX) {
     </div>
 
     <!-- Area teks Al-Qur'an -->
-<div id="quran-text" style="
-  direction:rtl; font-size:30px; line-height:2.2;
-
-  /* kunci justify */
-  text-align:justify;
-  text-align-last:right;
-  text-justify:inter-word;
-  white-space:normal;  /* ← ganti dari pre-wrap */
-
-  flex:1 1 auto; overflow:auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; scrollbar-gutter:stable;
-"></div>
-
+    <div id="quran-text" style="
+      direction:rtl; font-size:30px; line-height:2.2;
+      text-align:justify; text-align-last:right; text-justify:inter-word;
+      white-space:normal;
+      flex:1 1 auto; overflow:auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; scrollbar-gutter:stable;
+    "></div>
 
     <hr>
 
     <div>
       <span id="modal-nama-santri" style="font-weight:bold; font-size:18px;"></span>
-      <span id="nilai-akhir">100</span> — <span id="predikat-akhir">MUMTAZ</span>
+      <span id="nilai-akhir"></span> <span id="strip-separator" style="display:none;">—</span> <span id="predikat-akhir"></span>
     </div>
 
     <!-- Baris aksi nilai + tombol rekam -->
-<div class="manual-actions" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-  <input type="number" id="input-nilai-manual" min="0" max="100" step="0.1" style="width:90px;" placeholder="Nilai Manual">
-  <button id="btn-beri-nilai">Acc Nilai Manual</button>
-  <!-- ⬇️ Tombol baru Reset Nilai -->
-  <button id="btn-reset-nilai" class="btn-danger" title="Reset penilaian ke kondisi awal (kosong)">Reset Nilai</button>
-  <!-- ⬆️ Tombol baru -->
-  <button id="btn-open-record">Recording</button>
-</div>
+    <div class="manual-actions" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+      <input type="number" id="input-nilai-manual" min="0" max="100" step="0.1" style="width:90px;" placeholder="Nilai Manual">
+      <button id="btn-beri-nilai">Acc Nilai Manual</button>
+      <button id="btn-reset-nilai" style="background:#ffecec; border:1px solid #ffb4b4; border-radius:6px; padding:6px 10px; cursor:pointer;">Reset Nilai</button>
+      <button id="btn-open-record">Recording</button>
+    </div>
 
     <style>
       .keterangan-row{
@@ -1734,11 +1726,6 @@ function extendSemesterOptions(selectEl, max = SEMESTER_MAX) {
       .btn-primary:hover{ filter:brightness(1.05); }
       .btn-secondary{ background:#e9ecef; color:#333; }
       .btn-secondary:hover{ filter:brightness(0.98); }
-
-      /* ⬇️ Gaya tombol Reset Nilai */
-      .btn-danger{ background:#dc3545; color:#fff; }
-      .btn-danger:hover{ filter:brightness(1.05); }
-
       @media (max-width:380px){ .modal-actions{ flex-wrap:wrap; } .modal-actions button{ flex:1 0 100%; } }
     </style>
 
@@ -1822,14 +1809,34 @@ function getKelasTanggalAktif() {
 /* ========= AMBIL MARKS + AUDIO (SERVER) ========= */
 async function ambilMarksDariNetlify(id, kelas, tanggal) {
   try {
-    const url = `/api/getMarksAudio?id=${id}&kelas=${kelas}&tanggal=${tanggal}&t=${Date.now()}`; // cache-buster
-    const res = await fetch(url, { cache: 'no-store' });
+    const res = await fetch(`/api/getMarksAudio?id=${id}&kelas=${kelas}&tanggal=${tanggal}`);
     if (!res.ok) throw new Error('Gagal ambil marks dari server');
     const data = await res.json();
     return data.marks || {};
   } catch(err) {
     console.error(err);
     return {};
+  }
+}
+
+/* ========= RESET NILAI DI SERVER =========
+   Pastikan endpoint ini Anda sediakan di server:
+   POST /api/resetNilai  body: { id, kelas, tanggal }
+   Tugas server: hapus nilai & marks (kosong/null), boleh biarkan audio tetap ada.
+*/
+async function resetNilaiServer() {
+  try{
+    const { kelas, tanggal } = getKelasTanggalAktif();
+    const res = await fetch('/api/resetNilai', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ id: currentIdSiswa, kelas, tanggal })
+    });
+    // tidak wajib cek isi; UI tetap dibersihkan walau gagal
+    return res.ok;
+  }catch(e){
+    console.warn('Reset di server gagal/terlewat:', e);
+    return false;
   }
 }
 
@@ -1872,6 +1879,10 @@ function ambilDariStorage() {
   const saved = localStorage.getItem(getStorageKey());
   markData = saved ? JSON.parse(saved) : {};
 }
+function hapusStorage() {
+  if (!currentIdSiswa) return;
+  localStorage.removeItem(getStorageKey());
+}
 
 /* ========= HITUNG NILAI ========= */
 function hitungNilai() {
@@ -1897,15 +1908,17 @@ function hitungNilai() {
   let predikat = "-";
   if (adaMark) {
     const p = predikatMap.find(p => nilai <= p.max);
-    const warna = { A: "green", A: "green", B: "blue", C: "orange", D: "red" };
+    const warna = { A: "green", B: "blue", C: "orange", D: "red" };
     predikat = `${p.text} <span style="background-color:${warna[p.huruf]};color:white;padding:0 4px;border-radius:3px;">${p.huruf}</span>`;
   }
   const nilaiEl = document.getElementById("nilai-akhir");
   const predikatEl = document.getElementById("predikat-akhir");
-  if (nilaiEl) nilaiEl.innerText = nilai.toFixed(1);
-  if (predikatEl) predikatEl.innerHTML = predikat;
+  const sepEl = document.getElementById("strip-separator");
+  if (nilaiEl) nilaiEl.innerText = adaMark ? nilai.toFixed(1) : "";
+  if (predikatEl) predikatEl.innerHTML = adaMark ? predikat : "";
+  if (sepEl) sepEl.style.display = adaMark ? "inline" : "none";
   const warnaDiv = document.getElementById("modal-mark-warna");
-  if (warnaDiv) warnaDiv.innerHTML = `🟩 ${hijau} &nbsp; 🟨 ${kuning} &nbsp; 🟥 ${merah}`;
+  if (warnaDiv) warnaDiv.innerHTML = adaMark ? `🟩 ${hijau} &nbsp; 🟨 ${kuning} &nbsp; 🟥 ${merah}` : "";
   return { nilai, predikat, hijau, kuning, merah };
 }
 
@@ -1920,14 +1933,64 @@ document.getElementById("btn-beri-nilai").onclick = function() {
   else if (v <= 79) pred = "JAYYID (B)";
   else if (v <= 89) pred = "JAYYID JIDDAN (A)";
   else pred = "MUMTAZ PLUS (A)";
-  markData = {}; // kosongkan mark
+
+  // kosongkan mark warna saat memakai nilai manual (pilihan desain)
+  markData = {};
+
+  // set UI nilai
   document.getElementById("nilai-akhir").innerText = v.toFixed(1);
   document.getElementById("predikat-akhir").innerText = pred;
+  document.getElementById("strip-separator").style.display = "inline";
   document.getElementById("modal-mark-warna").innerHTML = `🟩 0 &nbsp; 🟨 0 &nbsp; 🟥 0`;
+
   updateNilaiDiTabel({ nilai: v, predikat: pred });
+  simpanKeStorage();
 };
 
-/* ========= UPDATE TABEL ========= */
+/* ========= TOMBOL RESET NILAI ========= */
+document.getElementById("btn-reset-nilai").onclick = async function() {
+  if (!currentIdSiswa) return alert("Klik 'Lembar Penilaian' dulu.");
+  const ya = confirm("Reset nilai & marks menjadi KOSONG (bukan 0)?");
+  if (!ya) return;
+
+  // 1) Hapus di server (jika endpoint tersedia)
+  await resetNilaiServer();
+
+  // 2) Bersihkan state lokal (nilai, predikat, marks, counter)
+  markData = {};
+  hapusStorage();
+
+  // kosongkan tampilan nilai (benar2 kosong)
+  const nilaiEl = document.getElementById("nilai-akhir");
+  const predEl  = document.getElementById("predikat-akhir");
+  const sepEl   = document.getElementById("strip-separator");
+  const warnaEl = document.getElementById("modal-mark-warna");
+  if (nilaiEl) nilaiEl.innerText = "";
+  if (predEl)  predEl.innerHTML = "";
+  if (sepEl)   sepEl.style.display = "none";
+  if (warnaEl) warnaEl.innerHTML = "";
+
+  // 3) Bersihkan highlight kata di overlay Qur'an
+  try {
+    const quranText = document.getElementById('quran-text');
+    if (quranText) {
+      quranText.querySelectorAll('span[data-key][data-idx]').forEach(sp => {
+        sp.style.backgroundColor = "";
+      });
+    }
+  } catch(e){}
+
+  // 4) Kembalikan kolom tabel seperti semula (tanpa nilai-ringkas)
+  resetNilaiDiTabel();
+
+  // 5) Kosongkan input manual
+  const inp = document.getElementById("input-nilai-manual");
+  if (inp) inp.value = "";
+
+  alert("Nilai & marks sudah direset menjadi KOSONG.");
+};
+
+/* ========= UPDATE & RESET TABEL ========= */
 function updateNilaiDiTabel({ nilai, predikat }) {
   if (!currentIdSiswa) return;
   let row = currentRowEl || [...document.querySelectorAll("table tbody tr")]
@@ -1939,6 +2002,20 @@ function updateNilaiDiTabel({ nilai, predikat }) {
         <div class="nilai-ringkas"><strong>${Number(nilai).toFixed(1)}</strong> ${predikat}</div>
         <button class="lihat-quran-btn">Lembar Penilaian</button>`;
       row.markData = JSON.parse(JSON.stringify(markData));
+    }
+  }
+}
+
+function resetNilaiDiTabel() {
+  if (!currentIdSiswa) return;
+  let row = currentRowEl || [...document.querySelectorAll("table tbody tr")]
+    .find(r => String(r.cells[0].innerText.trim()) === String(currentIdSiswa));
+  if (row) {
+    const cell = [...row.cells].find(td => td.querySelector(".lihat-quran-btn"));
+    if (cell) {
+      // HANYA tombol, tanpa nilai-ringkas (bersih)
+      cell.innerHTML = `<button class="lihat-quran-btn">Lembar Penilaian</button>`;
+      delete row.markData;
     }
   }
 }
@@ -1962,7 +2039,9 @@ function buatKataKlik(surah, ayat, teks) {
       else delete markData[surah+":"+ayat][idx];
       span.style.backgroundColor = warnaBaru || "";
       const hasil = hitungNilai();
-      updateNilaiDiTabel(hasil);
+      // Jika tidak ada mark warna lagi, tabel akan kosong saat disimpan/manual reset saja.
+      if (hasil) updateNilaiDiTabel(hasil);
+      simpanKeStorage();
     };
     if (markData[surah+":"+ayat]?.[idx]) span.style.backgroundColor = markData[surah+":"+ayat][idx];
     return span;
@@ -1982,16 +2061,6 @@ document.addEventListener('click', async function (e) {
 
   const overlay = document.getElementById('overlay-quran');
   overlay.style.display = 'flex';
-
-  // SELALU kosongkan ringkasan dulu saat overlay dibuka
-  (function initKosongOverlay(){
-    const nilaiEl = document.getElementById('nilai-akhir');
-    const predEl  = document.getElementById('predikat-akhir');
-    const warnaDiv= document.getElementById('modal-mark-warna');
-    if (nilaiEl) nilaiEl.textContent = '';
-    if (predEl)  predEl.innerHTML    = '';
-    if (warnaDiv) warnaDiv.innerHTML = '';
-  })();
 
   // baris yang diklik
   const row = e.target.closest('tr');
@@ -2062,8 +2131,7 @@ document.addEventListener('click', async function (e) {
     halamanMap[page].forEach(item => {
       const spans = buatKataKlik(item.surah, item.ayat, item.teks);
       spans.forEach(span => pageDiv.appendChild(span));
-      // pageDiv.appendChild(document.createElement('br'));   // ❌ hapus baris ini
-      pageDiv.appendChild(document.createTextNode(' '));       // ✅ spasi antar-ayat
+      pageDiv.appendChild(document.createTextNode(' '));
     });
 
     quranText.appendChild(pageDiv);
@@ -2074,27 +2142,30 @@ document.addEventListener('click', async function (e) {
     k !== 'audio' && markData[k] && typeof markData[k] === 'object' &&
     Object.values(markData[k]).some(v => v === 'green' || v === 'yellow' || v === 'red')
   );
-  const hasil = (typeof hitungNilai === 'function') ? hitungNilai() : null;
-
-  if (hasil && adaMarkBerwarna) {
-    updateNilaiDiTabel(hasil);
+  if (adaMarkBerwarna) {
+    const hasil = (typeof hitungNilai === 'function') ? hitungNilai() : null;
+    if (hasil) updateNilaiDiTabel(hasil);
   } else {
+    // Tidak ada mark -> kosongkan tampilan nilai (bukan 0)
     const ringkas = row.querySelector('.nilai-ringkas');
     const nilaiEl = document.getElementById('nilai-akhir');
     const predEl  = document.getElementById('predikat-akhir');
-    const warnaDiv= document.getElementById('modal-mark-warna');
+    const sepEl   = document.getElementById('strip-separator');
+    if (nilaiEl) nilaiEl.textContent = "";
+    if (predEl)  predEl.innerHTML = "";
+    if (sepEl)   sepEl.style.display = "none";
 
+    // Jika tabel punya nilai-ringkas (mis. manual sebelumnya), tampilkan ke modal;
+    // jika tidak ada, biarkan kosong
     if (ringkas && nilaiEl && predEl) {
       const strong = ringkas.querySelector('strong');
       const angka = strong ? parseFloat(String(strong.textContent).replace(',', '.')) : NaN;
-      if (!Number.isNaN(angka)) nilaiEl.textContent = angka.toFixed(1);
-      const sisa = ringkas.textContent.replace(strong?.textContent || '', '').trim();
-      predEl.innerHTML = sisa || '';
-    } else {
-      // tidak ada marks & tidak ada ringkas -> benar-benar kosong
-      if (nilaiEl) nilaiEl.textContent = '';
-      if (predEl)  predEl.innerHTML    = '';
-      if (warnaDiv) warnaDiv.innerHTML = '';
+      if (!Number.isNaN(angka)) {
+        nilaiEl.textContent = angka.toFixed(1);
+        document.getElementById('strip-separator').style.display = "inline";
+        const sisa = ringkas.textContent.replace(strong?.textContent || '', '').trim();
+        predEl.innerHTML = sisa || '';
+      }
     }
   }
 });
@@ -2264,101 +2335,6 @@ async function handleRecordedBlobMP3(blob){
   // selesai
   recordSpinEl.style.display = 'none';
 }
-
-/* ========= RESET PENILAIAN: UI + STORAGE + SERVER ========= */
-
-/** Hapus semua background warna pada kata2 Qur'an di overlay */
-function bersihkanWarnaQuranOverlay(){
-  const quranText = document.getElementById('quran-text');
-  if (!quranText) return;
-  quranText.querySelectorAll('span[data-key][data-idx]').forEach(sp => {
-    sp.style.backgroundColor = '';
-  });
-}
-
-/** Hapus nilai/predikat dan counter warna di overlay (kosongkan, bukan nol) */
-function kosongkanRingkasanOverlay(){
-  const nilaiEl = document.getElementById("nilai-akhir");
-  const predEl  = document.getElementById("predikat-akhir");
-  const warnaDiv= document.getElementById("modal-mark-warna");
-  if (nilaiEl) nilaiEl.textContent = '';          // benar-benar kosong
-  if (predEl)  predEl.innerHTML    = '';          // benar-benar kosong
-  if (warnaDiv) warnaDiv.innerHTML = '';          // hapus counter
-}
-
-/** Hapus cache lokal untuk santri + kelas + tanggal aktif */
-function hapusLocalStorageMarks(){
-  try{
-    const key = getStorageKey();
-    if (key) localStorage.removeItem(key);
-  }catch(e){ console.warn('Gagal hapus localStorage', e); }
-}
-
-/** Kembalikan sel tabel ke tampilan awal (tanpa nilai-ringkas) */
-function updateTabelKosong(){
-  if (!currentIdSiswa) return;
-  let row = currentRowEl || [...document.querySelectorAll("table tbody tr")]
-    .find(r => String(r.cells[0].innerText.trim()) === String(currentIdSiswa));
-  if (row) {
-    const cell = [...row.cells].find(td => td.querySelector(".lihat-quran-btn") || td.querySelector(".nilai-ringkas"));
-    if (cell) {
-      cell.innerHTML = `<button class="lihat-quran-btn">Lembar Penilaian</button>`;
-      try { delete row.markData; } catch(_){}
-    }
-  }
-}
-
-/** Panggil server untuk mengosongkan data (bukan nol).
- *  Kontrak: body { id, kelas, tanggal, keepAudio }
- *  Response: { success:true } atau { success:false, error:"..." }
- */
-async function resetMarksDiServer(){
-  const { kelas, tanggal } = getKelasTanggalAktif();
-  const payload = { id: String(currentIdSiswa), kelas, tanggal, keepAudio:true };
-
-  const res = await fetch('/api/resetMarks', {
-    method: 'POST',
-    headers: { 'Content-Type':'application/json' },
-    body: JSON.stringify(payload)
-  }).catch(err => ({ ok:false, json: async()=>({ error: String(err) }) }));
-
-  if (!res || !res.ok) {
-    let msg = 'Gagal menghubungi server untuk reset.';
-    try { const j = await res.json(); if (j?.error) msg += ` ${j.error}`; } catch(_){}
-    throw new Error(msg);
-  }
-  const json = await res.json();
-  if (!json?.success) throw new Error(json?.error || 'Reset server gagal.');
-}
-
-/* ==== Event tombol Reset Nilai ==== */
-document.getElementById('btn-reset-nilai').addEventListener('click', async () => {
-  if (!currentIdSiswa) return alert("Buka dulu 'Lembar Penilaian' pada baris santri.");
-
-  const ok = confirm("Reset seluruh penilaian untuk santri ini pada kelas & tanggal aktif?\n- Semua mark hijau/kuning/merah akan dibersihkan\n- Nilai & predikat dikosongkan (bukan 0)\n- Data di server dihapus (kosong)");
-  if (!ok) return;
-
-  // 1) Kosongkan struktur data di memori
-  markData = {};  // benar-benar kosong
-
-  // 2) Bersihkan UI overlay
-  bersihkanWarnaQuranOverlay();
-  kosongkanRingkasanOverlay();
-
-  // 3) Hapus cache lokal
-  hapusLocalStorageMarks();
-
-  // 4) Update tabel menjadi tanpa nilai
-  updateTabelKosong();
-
-  // 5) Kirim ke server (best effort). Jika gagal, UI tetap kosong tapi beri info.
-  try{
-    await resetMarksDiServer();
-  }catch(err){
-    console.warn(err);
-    alert("Reset lokal berhasil, namun server gagal di-update.\nSilakan coba lagi atau periksa endpoint /api/resetMarks.");
-  }
-});
 </script>
 
 
