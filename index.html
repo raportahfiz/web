@@ -1822,7 +1822,8 @@ function getKelasTanggalAktif() {
 /* ========= AMBIL MARKS + AUDIO (SERVER) ========= */
 async function ambilMarksDariNetlify(id, kelas, tanggal) {
   try {
-    const res = await fetch(`/api/getMarksAudio?id=${id}&kelas=${kelas}&tanggal=${tanggal}`);
+    const url = `/api/getMarksAudio?id=${id}&kelas=${kelas}&tanggal=${tanggal}&t=${Date.now()}`; // cache-buster
+    const res = await fetch(url, { cache: 'no-store' });
     if (!res.ok) throw new Error('Gagal ambil marks dari server');
     const data = await res.json();
     return data.marks || {};
@@ -1982,6 +1983,16 @@ document.addEventListener('click', async function (e) {
   const overlay = document.getElementById('overlay-quran');
   overlay.style.display = 'flex';
 
+  // SELALU kosongkan ringkasan dulu saat overlay dibuka
+  (function initKosongOverlay(){
+    const nilaiEl = document.getElementById('nilai-akhir');
+    const predEl  = document.getElementById('predikat-akhir');
+    const warnaDiv= document.getElementById('modal-mark-warna');
+    if (nilaiEl) nilaiEl.textContent = '';
+    if (predEl)  predEl.innerHTML    = '';
+    if (warnaDiv) warnaDiv.innerHTML = '';
+  })();
+
   // baris yang diklik
   const row = e.target.closest('tr');
   if (!row) return;                   /* guard */
@@ -2064,17 +2075,26 @@ document.addEventListener('click', async function (e) {
     Object.values(markData[k]).some(v => v === 'green' || v === 'yellow' || v === 'red')
   );
   const hasil = (typeof hitungNilai === 'function') ? hitungNilai() : null;
-  if (hasil && adaMarkBerwarna) updateNilaiDiTabel(hasil);
-  else {
+
+  if (hasil && adaMarkBerwarna) {
+    updateNilaiDiTabel(hasil);
+  } else {
     const ringkas = row.querySelector('.nilai-ringkas');
     const nilaiEl = document.getElementById('nilai-akhir');
     const predEl  = document.getElementById('predikat-akhir');
+    const warnaDiv= document.getElementById('modal-mark-warna');
+
     if (ringkas && nilaiEl && predEl) {
       const strong = ringkas.querySelector('strong');
       const angka = strong ? parseFloat(String(strong.textContent).replace(',', '.')) : NaN;
       if (!Number.isNaN(angka)) nilaiEl.textContent = angka.toFixed(1);
       const sisa = ringkas.textContent.replace(strong?.textContent || '', '').trim();
-      predEl.innerHTML = sisa || '-';  /* FIX typo */
+      predEl.innerHTML = sisa || '';
+    } else {
+      // tidak ada marks & tidak ada ringkas -> benar-benar kosong
+      if (nilaiEl) nilaiEl.textContent = '';
+      if (predEl)  predEl.innerHTML    = '';
+      if (warnaDiv) warnaDiv.innerHTML = '';
     }
   }
 });
@@ -2261,9 +2281,9 @@ function kosongkanRingkasanOverlay(){
   const nilaiEl = document.getElementById("nilai-akhir");
   const predEl  = document.getElementById("predikat-akhir");
   const warnaDiv= document.getElementById("modal-mark-warna");
-  if (nilaiEl) nilaiEl.textContent = '';          // ← benar-benar kosong
-  if (predEl)  predEl.innerHTML    = '';          // ← benar-benar kosong
-  if (warnaDiv) warnaDiv.innerHTML = '';          // ← hapus counter
+  if (nilaiEl) nilaiEl.textContent = '';          // benar-benar kosong
+  if (predEl)  predEl.innerHTML    = '';          // benar-benar kosong
+  if (warnaDiv) warnaDiv.innerHTML = '';          // hapus counter
 }
 
 /** Hapus cache lokal untuk santri + kelas + tanggal aktif */
