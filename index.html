@@ -471,7 +471,7 @@ button.lihat-quran-btn:hover::after {
     <div class="login-header">
     <img src="https://raw.githubusercontent.com/raportahfiz/web/main/rtd.png" alt="Logo Mutaba'ah Tahfizh" />
 	<br>
-   <h1 class="judul">RaporTahfiz.com Pondok Al Manar</h1>
+   <h1 class="judul">RaporTahfiz.com by Dicky Miswardi</h1>
     </div>
 
     <!-- Form Login -->
@@ -1351,7 +1351,7 @@ async function buatUserNIS() {
 			<th>Juz</th>
             <th>Total Juz</th>
             <th>Nilai</th>
-            <th id="totalAllJuzHeader" style="cursor:pointer; text-decoration:underline;">Setting Target</th>
+            <th id="totalAllJuzHeader" style="cursor:pointer; text-decoration:underline;">Setting THMS</th>
           </tr>
         </thead>
         <tbody></tbody>
@@ -1612,12 +1612,12 @@ function extendSemesterOptions(selectEl, max = SEMESTER_MAX) {
     <label>Jenjang:</label><br>
     <select id="inputJenjang" style="width:90%; margin-bottom:10px;">
   <option value=""></option>
-  <option value="A1">1 SMP</option>
-  <option value="A2">2 SMP</option>
-  <option value="A3">3 SMP</option>
-  <option value="A4">1 SMA</option>
-  <option value="A5">2 SMA</option>
-  <option value="A6">3 SMA</option>
+  <option value="A1">1 PDF</option>
+  <option value="A2">2 PDF</option>
+  <option value="A3">3 PDF</option>
+  <option value="A4">1 MA</option>
+  <option value="A5">2 MA</option>
+  <option value="A6">3 MA</option>
   </select>
 
     <div style="margin-top:10px; display:flex; justify-content:space-between; gap:8px;">
@@ -2316,12 +2316,12 @@ background:rgba(0,0,0,0.5); z-index:999; justify-content:center; align-items:cen
     </style>
 
     <!-- Bullet list cakep -->
-    <ul class="juz-list"><li>Semester 1: <strong>5</strong> Juz</li>
-<li>Semester 2: <strong>5</strong> Juz</li>
-<li>Semester 3: <strong>5</strong> Juz</li>
-<li>Semester 4: <strong>5</strong> Juz</li>
-<li>Semester 5: <strong>5</strong> Juz</li>
-<li>Semester 6: <strong>5</strong> Juz</li></ul>
+    <ul class="juz-list"><li>Semester 1: <strong>8</strong> Juz</li>
+      <li>Semester 2: <strong>5</strong> Juz</li>
+      <li>Semester 3: <strong>5</strong> Juz</li>
+      <li>Semester 4: <strong>5</strong> Juz</li>
+      <li>Semester 5: <strong>5</strong> Juz</li>
+      <li>Semester 6: <strong>10</strong> Juz</li></ul>
 
     <hr style="border:none; border-top:1px solid #eee; margin:8px 0 12px;">
 
@@ -2546,11 +2546,11 @@ background:rgba(0,0,0,0.5); z-index:999; justify-content:center; align-items:cen
     </style>
 
     <ul class="juz-list"><li>Semester 1: <strong>5</strong> Juz</li>
-<li>Semester 2: <strong>5</strong> Juz</li>
-<li>Semester 3: <strong>5</strong> Juz</li>
-<li>Semester 4: <strong>5</strong> Juz</li>
-<li>Semester 5: <strong>5</strong> Juz</li>
-<li>Semester 6: <strong>5</strong> Juz</li></ul>
+      <li>Semester 2: <strong>5</strong> Juz</li>
+      <li>Semester 3: <strong>5</strong> Juz</li>
+      <li>Semester 4: <strong>5</strong> Juz</li>
+      <li>Semester 5: <strong>5</strong> Juz</li>
+      <li>Semester 6: <strong>10</strong> Juz</li></ul>
 
     <hr style="border:none; border-top:1px solid #eee; margin:8px 0 12px;">
 
@@ -2595,11 +2595,31 @@ background:rgba(0,0,0,0.5); z-index:999; justify-content:center; align-items:cen
 
   // === Fungsi atur dropdown kelas ===
 function aturDropdownKelas(user) {
-  const semuaKelas = [  "kelas_012026","kelas_022026","kelas_032026"];
+  const semuaKelas = [  "kelas_012526","kelas_022526","kelas_032526","kelas_042526","kelas_052526","kelas_062526",
+    "kelas_072526","kelas_082526","kelas_092526","kelas_102526","kelas_112526","kelas_122526",
+    "kelas_132526","kelas_142526","kelas_152526","kelas_162526","kelas_172526","kelas_182526",
+    "kelas_192526","kelas_202526"];
 
-  const namaKelasCustom = {  kelas_012026: "Ust. Ahmad",
-  kelas_022026: "Ust. Musa",
-  kelas_032026: "Ust. Hamid"};
+  const namaKelasCustom = {  kelas_012526: "Ustadzah Lylika Tri Canda Medita",
+  kelas_022526: "Ustadzah Dewi Khumariah Rhasya",
+  kelas_032526: "Ustadzah Nadia Nurfadhilah",
+  kelas_042526: "Ustadzah Eliya",
+  kelas_052526: "Ustadzah Rima Karimah",
+  kelas_062526: "Ustadzah Rishana Hanifa",
+  kelas_072526: "Ustadzah Karimah",
+  kelas_082526: "Ustadzah Nurfadhilah Kamaliyah",
+  kelas_092526: "Ustadzah Umi Muthoharoh",
+  kelas_102526: "Ustadzah Sofi Agnia",
+  kelas_112526: "Ustadzah Ririn Nurlaily",
+  kelas_122526: "Ustadzah Zihan Audrian Hidayat",
+  kelas_132526: "Ustadzah Nopia",
+  kelas_142526: "Ustadz Imam Tolhah",
+  kelas_152526: "Ustadz Fahri Aziz",
+  kelas_162526: "Ustadz Saeful Munawar Rizal",
+  kelas_172526: "Ustadz Aflah Musoddaq",
+  kelas_182526: "Ustadz Saif Abdullah",
+  kelas_192526: "Ustadz Muhammad Farhan Hidayat",
+  kelas_202526: "Ustadz Farrid Ilallah"};
 
   kelasSelect.innerHTML = "";
 
@@ -2778,9 +2798,9 @@ logoutBtn.addEventListener("click", () => {
   // Konfigurasi global yang bisa dioverride sebelum loadSantriData jalan
   window.ABS_FLEX_CFG = window.ABS_FLEX_CFG || {
     statuses: ["hadir","izin","sakit","alpha"],
-    perStatus: Number(window.ABS_FLEX_PER_STATUS ?? 3), // default 5 sesi, bisa 5..3
-    defaultTarget: 6,                                   // default denominator
-    maxTarget: 3,                                       // denominator 1..6
+    perStatus: Number(window.ABS_FLEX_PER_STATUS ?? 4), // default 4 sesi, bisa 1..6
+    defaultTarget: 4,                                   // default denominator
+    maxTarget: 6,                                       // denominator 1..6
     labels: null                                        // {hadir:[...], izin:[...], ...] (opsional)
   };
 
@@ -2798,7 +2818,7 @@ logoutBtn.addEventListener("click", () => {
     const Title   = st.charAt(0).toUpperCase() + st.slice(1);
     const idx     = i - 1;
     const per     = ABS_FLEX_CFG.perStatus|0;
-    const sesiAll = ["Pagi"];
+    const sesiAll = ["Subuh","Pagi","Sore","Malam","Ekstra 1","Ekstra 2"];
 
     // Legacy: jika tetap 2 sesi, pertahankan Pagi/Sore
     if (per === 2){
@@ -3217,7 +3237,7 @@ async function loadSantriData() {
   overlay.style.display = "flex";
 
   // ===== util jenjang (tetap) =====
-  const JENJANG_MAX = Number(window.JENJANG_MAX ?? 6);
+  const JENJANG_MAX = Number(window.JENJANG_MAX ?? 9);
 
   const parseJenjang = (v) => {
     const m = /^A(\d+)$/.exec(String(v || "").trim());
@@ -3652,12 +3672,12 @@ async function loadSantriData() {
           <td class="col-nama">${santri.nama ?? ""}${subTanggal}</td>
           <td>
             <select class="jenjang">
-    <option value="A1" ${jenNow === 'A1' ? 'selected' : ''}>1 SMP</option>
-    <option value="A2" ${jenNow === 'A2' ? 'selected' : ''}>2 SMP</option>
-    <option value="A3" ${jenNow === 'A3' ? 'selected' : ''}>3 SMP</option>
-    <option value="A4" ${jenNow === 'A4' ? 'selected' : ''}>1 SMA</option>
-    <option value="A5" ${jenNow === 'A5' ? 'selected' : ''}>2 SMA</option>
-    <option value="A6" ${jenNow === 'A6' ? 'selected' : ''}>3 SMA</option>
+    <option value="A1" ${jenNow === 'A1' ? 'selected' : ''}>1 PDF</option>
+    <option value="A2" ${jenNow === 'A2' ? 'selected' : ''}>2 PDF</option>
+    <option value="A3" ${jenNow === 'A3' ? 'selected' : ''}>3 PDF</option>
+    <option value="A4" ${jenNow === 'A4' ? 'selected' : ''}>1 MA</option>
+    <option value="A5" ${jenNow === 'A5' ? 'selected' : ''}>2 MA</option>
+    <option value="A6" ${jenNow === 'A6' ? 'selected' : ''}>3 MA</option>
   </select>
           </td>
           <td>
@@ -3667,7 +3687,6 @@ async function loadSantriData() {
     <option value="3" ${String(semNow) === '3' ? 'selected' : ''}>3</option>
     <option value="4" ${String(semNow) === '4' ? 'selected' : ''}>4</option>
     <option value="5" ${String(semNow) === '5' ? 'selected' : ''}>5</option>
-    <option value="6" ${String(semNow) === '6' ? 'selected' : ''}>6</option>
   </select>
           </td>
 
@@ -3682,7 +3701,6 @@ async function loadSantriData() {
     <option value="" ${!ketNow ? 'selected' : ''}></option>
     <option value="SP1" ${ketNow === 'SP1' ? 'selected' : ''}>SP1</option>
     <option value="SP2" ${ketNow === 'SP2' ? 'selected' : ''}>SP2</option>
-    <option value="SP3" ${ketNow === 'SP3' ? 'selected' : ''}>SP3</option>
   </select>
           </td>
           <td>
@@ -4777,9 +4795,30 @@ document.getElementById('mur-save')?.addEventListener('click', function(){ simpa
   // === Helper Kelas/Kelompok ===
 function buildKelasKelompokLine(kelas, kelasEl) {
   const kelasNum = (String(kelas||'').match(/(\d+)/)?.[1]) || (kelas || '-');
-  const custom = window.namaKelasCustom || window.NAMA_KELAS_CUSTOM || {  kelas_012026: "Ust. Ahmad",
-  kelas_022026: "Ust. Musa",
-  kelas_032026: "Ust. Hamid"};
+  const custom = window.namaKelasCustom || window.NAMA_KELAS_CUSTOM || {  kelas_012526: "Ust. Tukimin",
+  kelas_022526: "Ust. Dicky Miswardi",
+  kelas_032526: "Ust. Jundullah BA",
+  kelas_042526: "Ust. Abdullah",
+  kelas_052526: "Ust. Ro'uuf Noor Huda Su'udin",
+  kelas_062526: "Ust. Salahuddin Santoaji P",
+  kelas_072526: "Ust. Hammam Ahmed Saleh",
+  kelas_082526: "Ust. Alif Rafiqul",
+  kelas_092526: "Ust. Ali Wardana",
+  kelas_102526: "Ust. Mullah Muhammad Umar",
+  kelas_112526: "Ust. Akhsani Tawqim",
+  kelas_122526: "Ust. Ikhsan Nur Kamidin",
+  kelas_132526: "Ust. Abdul Haq",
+  kelas_142526: "Ust. Abdullah Al Guspari",
+  kelas_152526: "Ust. Abdullah Rafi",
+  kelas_162526: "Ust. Fajriul Ihsan",
+  kelas_172526: "Ust. Idris",
+  kelas_182526: "Ust. Muhammad Athayya Mumtaz",
+  kelas_192526: "Ust. M. Hanan Azili",
+  kelas_202526: "Ust. Muhammad Rama Miayasin",
+  kelas_212526: "Ust. Nur Afiq",
+  kelas_222526: "Ust. Raditya Baswara Raharjo",
+  kelas_232526: "Ust. Rafie Zahran Kurniawan",
+  kelas_242526: "Ust. Shidiq Hasan Khan"};
     let kelompok = custom[kelas] || "";
     if (!kelompok) {
       const optText = kelasEl?.options?.[kelasEl.selectedIndex]?.text?.trim() || "";
@@ -5480,7 +5519,7 @@ window.PDF_joinRangeSegmentsCompact = PDF_joinRangeSegmentsCompact;
       const rightX = margin.left + colW + colGap;
 
       doc.setFont('helvetica','normal'); doc.setFontSize(11);
-      doc.text(`Jakarta, ${ttdDate}`, margin.left + totalW, y, { align:'right' });
+      doc.text(`Tengaran, ${ttdDate}`, margin.left + totalW, y, { align:'right' });
 
       const headY = y + 8;
       doc.text('Mengetahui,', leftX, headY);
@@ -5916,7 +5955,7 @@ window.PDF_joinRangeSegmentsCompact = PDF_joinRangeSegmentsCompact;
       const rightX = margin.left + colW + colGap;
 
       doc.setFont('helvetica','normal'); doc.setFontSize(11);
-      doc.text(`jakarta, ${ttdDate}`, margin.left + totalW, y, { align:'right' });
+      doc.text(`Tengaran, ${ttdDate}`, margin.left + totalW, y, { align:'right' });
 
       const headY = y + 8;
       doc.text('Mengetahui,', leftX, headY);
@@ -6230,7 +6269,7 @@ async function xlsRekapDownload(){
     return out.length ? out.join(', ') : '-';
   }
   function PDF_percentCapaian(totalJuzNum, semester){
-    const batasSemester = {1: 5, 2: 10, 3: 15, 4: 20, 5: 25, 6: 30};
+    const batasSemester = {1: 8, 2: 5, 3: 5, 4: 5, 5: 5, 6: 2};
     const total = Number(totalJuzNum);
     const sem   = Number(semester);
     if (!Number.isFinite(total)) return 0;
@@ -6881,7 +6920,7 @@ async function pdfSantriDownload(){
     const rightX = margin.left + colW + colGap;
 
     doc.setFont('helvetica','normal'); doc.setFontSize(11);
-    doc.text(`Jakarta, ${ttdDate}`, margin.left + totalW, y, { align:'right' });
+    doc.text(`Tengaran, ${ttdDate}`, margin.left + totalW, y, { align:'right' });
 
     const headY = y + 8;
     doc.text('Mengetahui,', leftX, headY);
@@ -7081,7 +7120,7 @@ async function hitungTotalAllJuzFromTable() {
       rekap[key].totalJuz += readTotalJuz(item);
     });
 
-    const batasSemester = {1: 5, 2: 10, 3: 15, 4: 20, 5: 25, 6: 30};
+    const batasSemester = {1: 5, 2: 10, 3: 15, 4: 20, 5: 30};
     const defaultTarget = 30;
 
     const dataToSave = [];
@@ -7228,7 +7267,7 @@ async function hitungTotalAllJuzOtomatis() {
       rekap[key].totalJuz += readTotalJuz(item);
     });
 
-    const batasSemester = {1: 5, 2: 10, 3: 15, 4: 20, 5: 25, 6: 30};
+    const batasSemester = {1: 5, 2: 10, 3: 15, 4: 20, 5: 30};
     const defaultTarget = 30;
 
     rowsArr.forEach(row => {
@@ -8379,7 +8418,7 @@ if (window.currentRowEl){
     else { s=s.replace(/,/g,""); }
     const n = parseFloat(s); return Number.isFinite(n)?n:0;
   };
-  const BATAS = {1: 5, 2: 10, 3: 15, 4: 20, 5: 25, 6: 30};
+  const BATAS = {1: 5, 2: 10, 3: 15, 4: 20, 5: 30};
   const LS_KEY = k => `murRange:${k}`;
 
   function getSantriTable(){
@@ -8824,7 +8863,7 @@ if (window.currentRowEl){
 
 <script>
   // ====== KONFIG (opsional dari window.*) ======
-  const JENJANG_MAX = Number(window.JENJANG_MAX ?? 6);             // 34 default; 0 = tanpa batas atas
+  const JENJANG_MAX = Number(window.JENJANG_MAX ?? 9);             // 34 default; 0 = tanpa batas atas
   const JENJANG_SAFETY_CAP = Number(window.JENJANG_SAFETY_CAP ?? 1000); // darurat bila tanpa batas
 
   // ====== Helper jenjang dinamis ======
@@ -9864,10 +9903,10 @@ document.addEventListener("DOMContentLoaded", () => {
     {key:'THMS_JUZLIST_MURRANGE',   label:'23) THMS — Juz List di #murRangeOverlay (isi <li>…)</li>', editable:true, required:true},
 
     // ==== BARU: ABSENSI FLEX (4 elemen) ====
-    {key:'ABS_PER_STATUS',     label:'24) ABS Flex — perStatus (1..6)',                     editable:true,  required:true},
-    {key:'ABS_DEFAULT_TARGET', label:'25) ABS Flex — defaultTarget (1..6)',                 editable:true,  required:true},
-    {key:'ABS_MAX_TARGET',     label:'26) ABS Flex — maxTarget (1..6)',                     editable:true,  required:true},
-    {key:'ABS_SESI_ALL',       label:'27) ABS Flex — sesiAll (array ["Subuh","Pagi",...])', editable:true,  required:true},
+    {key:'ABS_PER_STATUS',    label:'24) ABS Flex — perStatus (1..6)',                     editable:true,  required:true},
+    {key:'ABS_DEFAULT_TARGET',label:'25) ABS Flex — defaultTarget (1..6)',                 editable:true,  required:true},
+    {key:'ABS_MAX_TARGET',    label:'26) ABS Flex — maxTarget (1..6)',                     editable:true,  required:true},
+    {key:'ABS_SESI_ALL',      label:'27) ABS Flex — sesiAll (array ["Subuh","Pagi",...])', editable:true,  required:true},
   ];
   const ITEM = Object.fromEntries(ITEMS.map(i=>[i.key,i]));
 
