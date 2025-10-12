@@ -2778,7 +2778,7 @@ logoutBtn.addEventListener("click", () => {
   // Konfigurasi global yang bisa dioverride sebelum loadSantriData jalan
   window.ABS_FLEX_CFG = window.ABS_FLEX_CFG || {
     statuses: ["hadir","izin","sakit","alpha"],
-    perStatus: Number(window.ABS_FLEX_PER_STATUS ?? 5), // default 5 sesi, bisa 2..2
+    perStatus: Number(window.ABS_FLEX_PER_STATUS ?? 5), // default 5 sesi, bisa 5..2
     defaultTarget: 2,                                   // default denominator
     maxTarget: 2,                                       // denominator 1..6
     labels: null                                        // {hadir:[...], izin:[...], ...] (opsional)
