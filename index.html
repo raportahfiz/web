@@ -4769,6 +4769,38 @@ document.getElementById('mur-save')?.addEventListener('click', function(){ simpa
     };
   }
 
+// ====== Apakah record harian ini "bermakna" untuk dihitung sebagai 1 hari KBM? ======
+function _isMeaningfulKBM(rec){
+  // slot absensi
+  const checked = Number(rec?._slotChecked || 0);
+  if (checked > 0) return true;
+
+  // setoran: dari–sampai, total juz/halaman
+  const adaRange = !!(rec?.dari || rec?.dariSetoran) && !!(rec?.sampai || rec?.sampaiSetoran);
+  if (adaRange) return true;
+
+  const totJuz = Number(rec?.totalJuz ?? rec?.juz ?? rec?.total_juz_num ?? 0);
+  if (totJuz > 0) return true;
+
+  const totHalaman = Number(rec?.totalHalaman ?? rec?.totalPage ?? 0);
+  if (totHalaman > 0) return true;
+
+  // murajaah (server biasanya di `juzmurajaah` / `total_mur_num`)
+  const mur = Number(rec?.juzmurajaah ?? rec?.murajaah ?? rec?.mur_juz ?? rec?.total_mur_num ?? 0);
+  if (mur > 0) return true;
+
+  // nilai / predikat
+  const adaNilai = (rec?.buttonCell && rec.buttonCell.nilai!=null)
+                || (rec?.nilai != null) || (rec?.score != null);
+  if (adaNilai) return true;
+
+  // keterangan non-kosong
+  const ket = (rec?.keterangan ?? '').toString().trim();
+  if (ket) return true;
+
+  return false;
+}
+
   // ====== Helper agregasi slot per santri (BARU) ======
   function _aggregateSlotsPerKey(items){
     const map = new Map();
@@ -4795,30 +4827,30 @@ document.getElementById('mur-save')?.addEventListener('click', function(){ simpa
   // === Helper Kelas/Kelompok ===
 function buildKelasKelompokLine(kelas, kelasEl) {
   const kelasNum = (String(kelas||'').match(/(\d+)/)?.[1]) || (kelas || '-');
-  const custom = window.namaKelasCustom || window.NAMA_KELAS_CUSTOM || {  kelas_012526: "Ust. Tukimin",
-  kelas_022526: "Ust. Dicky Miswardi",
-  kelas_032526: "Ust. Jundullah BA",
-  kelas_042526: "Ust. Abdullah",
-  kelas_052526: "Ust. Ro'uuf Noor Huda Su'udin",
-  kelas_062526: "Ust. Salahuddin Santoaji P",
-  kelas_072526: "Ust. Hammam Ahmed Saleh",
-  kelas_082526: "Ust. Alif Rafiqul",
-  kelas_092526: "Ust. Ali Wardana",
-  kelas_102526: "Ust. Mullah Muhammad Umar",
-  kelas_112526: "Ust. Akhsani Tawqim",
-  kelas_122526: "Ust. Ikhsan Nur Kamidin",
-  kelas_132526: "Ust. Abdul Haq",
-  kelas_142526: "Ust. Abdullah Al Guspari",
-  kelas_152526: "Ust. Abdullah Rafi",
-  kelas_162526: "Ust. Fajriul Ihsan",
-  kelas_172526: "Ust. Idris",
-  kelas_182526: "Ust. Muhammad Athayya Mumtaz",
-  kelas_192526: "Ust. M. Hanan Azili",
-  kelas_202526: "Ust. Muhammad Rama Miayasin",
-  kelas_212526: "Ust. Nur Afiq",
-  kelas_222526: "Ust. Raditya Baswara Raharjo",
-  kelas_232526: "Ust. Rafie Zahran Kurniawan",
-  kelas_242526: "Ust. Shidiq Hasan Khan"};
+  const custom = window.namaKelasCustom || window.NAMA_KELAS_CUSTOM || {  kelas_012025: "Ust. Tukimin",
+  kelas_022025: "Ust. Dicky Miswardi",
+  kelas_032025: "Ust. Jundullah BA",
+  kelas_042025: "Ust. Abdullah",
+  kelas_052025: "Ust. Ro'uuf Noor Huda Su'udin",
+  kelas_062025: "Ust. Salahuddin Santoaji P",
+  kelas_072025: "Ust. Hammam Ahmed Saleh",
+  kelas_082025: "Ust. Alif Rafiqul",
+  kelas_092025: "Ust. Ali Wardana",
+  kelas_102025: "Ust. Mullah Muhammad Umar",
+  kelas_112025: "Ust. Akhsani Tawqim",
+  kelas_122025: "Ust. Ikhsan Nur Kamidin",
+  kelas_132025: "Ust. Abdul Haq",
+  kelas_142025: "Ust. Abdullah Al Guspari",
+  kelas_152025: "Ust. Abdullah Rafi",
+  kelas_162025: "Ust. Fajriul Ihsan",
+  kelas_172025: "Ust. Idris",
+  kelas_182025: "Ust. Muhammad Athayya Mumtaz",
+  kelas_192025: "Ust. M. Hanan Azili",
+  kelas_202025: "Ust. Muhammad Rama Miayasin",
+  kelas_212025: "Ust. Nur Afiq",
+  kelas_222025: "Ust. Raditya Baswara Raharjo",
+  kelas_232025: "Ust. Rafie Zahran Kurniawan",
+  kelas_242025: "Ust. Shidiq Hasan Khan"};
     let kelompok = custom[kelas] || "";
     if (!kelompok) {
       const optText = kelasEl?.options?.[kelasEl.selectedIndex]?.text?.trim() || "";
@@ -5036,10 +5068,12 @@ async function d1FetchAbsensiAggMap({ kelas, start, end }) {
     };
   });
 
-  // 4) KBM hari unik
-  const kbmDaySet = new Set();
-  (allDataNorm||[]).forEach(it => { if (it?.tanggal) kbmDaySet.add(String(it.tanggal)); });
-  const kbmDays = kbmDaySet.size;
+  	// 4) KBM hari unik (HANYA hari dengan record bermakna)
+	const kbmDaySet = new Set();
+	(allDataNorm||[]).forEach(it => {
+	if (it?.tanggal && _isMeaningfulKBM(it)) kbmDaySet.add(String(it.tanggal));
+	});
+	const kbmDays = kbmDaySet.size;
 
   // 5) Agregasi base + merge angka aggregate D1
   const aggMap = PDF_buildRekapPerKey(allDataNorm);
@@ -5119,7 +5153,7 @@ async function d1FetchAbsensiAggMap({ kelas, start, end }) {
         const resSantri = await fetch(`/api/getSantri?kelas=${encodeURIComponent(kelas)}&t=${Date.now()}`);
 let santriData = await resSantri.json().catch(() => []);
 if (!Array.isArray(santriData)) santriData = [];   // <<< penting: kalau API balik {error:...}
-        const arr = (data||[]).map(s => ({ key: (s.nis||s.id||'').toString(), nama: s.nama||'-', nis: s.nis||'', id: s.id||'' }))
+        const arr = (santriData||[]).map(s => ({ key: (s.nis||s.id||'').toString(), nama: s.nama||'-', nis: s.nis||'', id: s.id||'' }))
                               .filter(x => x.key).sort((a,b)=>a.nama.localeCompare(b.nama,'id'));
         sel.innerHTML = `<option value="">— Pilih santri —</option>` +
           arr.map(x => `<option value="${x.key}" data-nama="${(x.nama||'').replace(/"/g,'&quot;')}">${x.nis ? x.nis : x.id} — ${x.nama}</option>`).join('');
@@ -5368,7 +5402,10 @@ window.PDF_joinRangeSegmentsCompact = PDF_joinRangeSegmentsCompact;
         const sakitSlots = Number(r.sakitSlots ?? r.sakit ?? 0);
         const alphaSlots = Number(r.alphaSlots ?? r.alpha ?? 0);
         const targetSlots= Number(r.targetSlots ?? 0);
-        const hadirPct   = targetSlots > 0 ? Math.round((hadirSlots / targetSlots) * 100) : 0;
+        const denomSlots = hadirSlots + izinSlots + sakitSlots + alphaSlots;
+		const hadirPct   = denomSlots > 0
+		? Math.round((hadirSlots / denomSlots) * 100)
+		: (targetSlots > 0 ? Math.round((hadirSlots / targetSlots) * 100) : 0);
 
         return {
           no: String(idx+1),
@@ -5649,10 +5686,12 @@ window.PDF_joinRangeSegmentsCompact = PDF_joinRangeSegmentsCompact;
     };
   });
 
-  // 4) KBM unik
-  const kbmDaySet = new Set();
-  (allDataNorm||[]).forEach(it => { if (it?.tanggal) kbmDaySet.add(String(it.tanggal)); });
-  const kbmDays = kbmDaySet.size;
+  	// 4) KBM unik (HANYA hari bermakna)
+	const kbmDaySet = new Set();
+	(allDataNorm||[]).forEach(it => {
+	if (it?.tanggal && _isMeaningfulKBM(it)) kbmDaySet.add(String(it.tanggal));
+	});
+	const kbmDays = kbmDaySet.size;
 
   // 5) Agregasi base + merge angka aggregate D1
   const aggMap = PDF_buildRekapPerKey(allDataNorm);
@@ -5822,7 +5861,10 @@ window.PDF_joinRangeSegmentsCompact = PDF_joinRangeSegmentsCompact;
           const sakitSlots = Number(r.sakitSlots ?? r.sakit ?? 0);
           const alphaSlots = Number(r.alphaSlots ?? r.alpha ?? 0);
           const targetSlots= Number(r.targetSlots ?? 0);
-          const hadirPct   = targetSlots > 0 ? Math.round((hadirSlots / targetSlots) * 100) : 0;
+          const denomSlots = hadirSlots + izinSlots + sakitSlots + alphaSlots;
+		  const hadirPct   = denomSlots > 0
+		  ? Math.round((hadirSlots / denomSlots) * 100)
+		  : (targetSlots > 0 ? Math.round((hadirSlots / targetSlots) * 100) : 0);
 
           return {
             no: String(idx+1),
@@ -6648,7 +6690,15 @@ async function pdfSantriDownload(){
       if (vN!=null) { d.nilaiSum += vN; d.nilaiCount++; }
     }
 
-    const dayRows = [...byDate.values()].sort((a,b)=> (a.tanggal||'').localeCompare(b.tanggal||''));
+    let dayRows = [...byDate.values()].sort((a,b)=> (a.tanggal||'').localeCompare(b.tanggal||''));
+	// Buang hari yang benar-benar kosong: tidak ada slot cek, setoran, murajaah, halaman, atau nilai
+	dayRows = dayRows.filter(d =>
+	Number(d.checkedSlots||0) > 0 ||
+	Number(d.totalJuz||0) > 0 ||
+	Number(d.murJuz||0) > 0 ||
+	Number(d.totalPage||0) > 0 ||
+	Number(d.nilaiCount||0) > 0
+	);
 
     // ==== Rekap total slot (pakai dari agregat jika ada) ====
     const agg = aggRows.find(r => r.nis === key || (!r.nis && r.id === key));
@@ -6672,12 +6722,18 @@ async function pdfSantriDownload(){
     const statusJuzTotal = PDF_totalAllJuzStatus(totJuz, agg?.semester ?? semesterSantri);
 
     // Persentase kehadiran total (slot-based)
-    const hadirPctTotal = totalTargetSlots > 0 ? Math.round((totH / totalTargetSlots) * 100) : 0;
+    const denomTotal = totH + totI + totS + totA;
+	const hadirPctTotal = denomTotal > 0
+	? Math.round((totH / denomTotal) * 100)
+	: (totalTargetSlots > 0 ? Math.round((totH / totalTargetSlots) * 100) : 0);
 
     // ==== Baris harian (slot-based) ====
     const tableRows = dayRows.map((d, idx) => {
       const targetSlots = Number(d.targetSlots || 0);
-      const hadirPct = targetSlots > 0 ? Math.round(100 * d.cnt.hadir / targetSlots) : 0;
+	  const denomDay = d.cnt.hadir + d.cnt.izin + d.cnt.sakit + d.cnt.alpha;
+	  const hadirPct = denomDay > 0
+	  ? Math.round(100 * d.cnt.hadir / denomDay)
+	  : (targetSlots > 0 ? Math.round(100 * d.cnt.hadir / targetSlots) : 0);
 
       const nilaiHarian = d.nilaiCount ? (d.nilaiSum/d.nilaiCount) : 0;
       const predHarian  = PDF_predikatFromScore(nilaiHarian);
