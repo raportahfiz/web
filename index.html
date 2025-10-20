@@ -5384,8 +5384,9 @@ window.PDF_joinRangeSegmentsCompact = PDF_joinRangeSegmentsCompact;
       const contentW = pageW - margin.left - margin.right;
 
       const tableData = rows.map((r, idx) => {
-        const nilaiAvg  = r.nilaiCount ? (r.nilaiSum / r.nilaiCount) : 0;
-        const pred      = PDF_predikatFromScore(nilaiAvg);
+        const hasNilai  = (r.nilaiCount ?? 0) > 0;
+		const nilaiAvg  = hasNilai ? (r.nilaiSum / r.nilaiCount) : null;
+		const predHuruf = hasNilai ? PDF_predikatFromScore(nilaiAvg).huruf : '-';
         const statusJuz = PDF_totalAllJuzStatus(r.totalJuz, r.semester);
         const setoranText = PDF_joinSAsegmentsNamaMerged(r.saSegments);
         const juzText     = PDF_joinRangeSegmentsCompact(r.juzSegments, true);
@@ -5415,8 +5416,8 @@ window.PDF_joinRangeSegmentsCompact = PDF_joinRangeSegmentsCompact;
           totJuz: r.totalJuz.toFixed(2),
 		  murRange: fmtMurRange(r.murTotalJuz || 0, r.murCount || 0),
           persen: statusJuz.label,
-          nilai: nilaiAvg ? nilaiAvg.toFixed(1) : '-',
-          pred: pred.huruf
+          nilai: hasNilai ? nilaiAvg.toFixed(1) : '-',
+		  pred: predHuruf
         };
       });
 
@@ -5844,8 +5845,9 @@ window.PDF_joinRangeSegmentsCompact = PDF_joinRangeSegmentsCompact;
         const { kelasLine, kbmDays, rows } = data;
 
         const tableData = rows.map((r, idx) => {
-          const nilaiAvg  = r.nilaiCount ? (r.nilaiSum / r.nilaiCount) : 0;
-          const pred      = PDF_predikatFromScore(nilaiAvg);
+          const hasNilai  = (r.nilaiCount ?? 0) > 0;
+			const nilaiAvg  = hasNilai ? (r.nilaiSum / r.nilaiCount) : null;
+			const predHuruf = hasNilai ? PDF_predikatFromScore(nilaiAvg).huruf : '-';
           const statusJuz = PDF_totalAllJuzStatus(r.totalJuz, r.semester);
           const setoranText = PDF_joinSAsegmentsNamaMerged(r.saSegments);
           const juzText     = PDF_joinRangeSegmentsCompact(r.juzSegments, true);
@@ -5874,8 +5876,8 @@ window.PDF_joinRangeSegmentsCompact = PDF_joinRangeSegmentsCompact;
             totJuz: r.totalJuz.toFixed(2),
 			murRange: fmtMurRange(r.murTotalJuz || 0, r.murCount || 0),
             persen: statusJuz.label,
-            nilai: nilaiAvg ? nilaiAvg.toFixed(1) : '-',
-            pred: pred.huruf
+            nilai: hasNilai ? nilaiAvg.toFixed(1) : '-',
+			pred: predHuruf
           };
         });
 
@@ -6066,8 +6068,9 @@ async function xlsRekapDownload(){
 
       // ---- 3) Baris data (tanpa kolom Kelas/Kelompok)
       const body = rows.map((r, idx) => {
-        const nilaiAvg  = r.nilaiCount ? (r.nilaiSum / r.nilaiCount) : 0;
-        const pred      = PDF_predikatFromScore(nilaiAvg);
+        const hasNilai  = (r.nilaiCount ?? 0) > 0;
+		const nilaiAvg  = hasNilai ? (r.nilaiSum / r.nilaiCount) : null;
+		const predHuruf = hasNilai ? PDF_predikatFromScore(nilaiAvg).huruf : '-';
         const statusJuz = PDF_totalAllJuzStatus(r.totalJuz, r.semester);
         const setoranText = PDF_joinSAsegmentsNamaMerged(r.saSegments);
         const juzText     = PDF_joinRangeSegmentsCompact(r.juzSegments, true);
@@ -6093,8 +6096,8 @@ async function xlsRekapDownload(){
           Number(r.totalJuz.toFixed(2)),
           fmtMurRange(r.murTotalJuz || 0, r.murCount || 0),
           statusJuz.label,
-          (nilaiAvg ? Number(nilaiAvg.toFixed(1)) : null),
-          pred.huruf
+          (hasNilai ? Number(nilaiAvg.toFixed(1)) : null), // biar sel Excel kosong
+		  predHuruf                                        // kalau tak ada nilai → "-"
         ];
       });
 
