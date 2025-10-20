@@ -4684,12 +4684,6 @@ document.getElementById('mur-save')?.addEventListener('click', function(){ simpa
 
 	 
 // ============================
-// B. DOWNLOAD DATA
-// ============================	 
-// ============================
-// Download PDF/Excel Rekap (slot-based attendance)
-// ============================
-// ============================
 // Download PDF/Excel Rekap (slot-based attendance)
 // ============================
 (function(){
@@ -6718,7 +6712,15 @@ async function pdfSantriDownload(){
 	const murCountTotal = dayRows.reduce((s,d)=> s + ((d.murJuz||0) > 0 ? 1 : 0), 0);
 	const murJuzTotal   = +( (agg?.murTotalJuz ?? dayRows.reduce((s,d)=> s + (d.murJuz||0), 0)).toFixed(2) );
 
-    const nilaiAvg = (agg?.nilaiCount ? agg.nilaiSum/agg.nilaiCount : 0);
+    const totalNilaiCount = (agg?.nilaiCount != null)
+	? agg.nilaiCount
+	: dayRows.reduce((s,d)=> s + (d.nilaiCount||0), 0);
+	const hasNilaiTotal = totalNilaiCount > 0;
+	const nilaiAvg = hasNilaiTotal
+	? ((agg?.nilaiCount != null && agg.nilaiCount > 0)
+	? (agg.nilaiSum / agg.nilaiCount)
+	: (dayRows.reduce((s,d)=> s + (d.nilaiSum||0), 0) / totalNilaiCount))
+	: null;
     const statusJuzTotal = PDF_totalAllJuzStatus(totJuz, agg?.semester ?? semesterSantri);
 
     // Persentase kehadiran total (slot-based)
@@ -6735,8 +6737,11 @@ async function pdfSantriDownload(){
 	  ? Math.round(100 * d.cnt.hadir / denomDay)
 	  : (targetSlots > 0 ? Math.round(100 * d.cnt.hadir / targetSlots) : 0);
 
-      const nilaiHarian = d.nilaiCount ? (d.nilaiSum/d.nilaiCount) : 0;
-      const predHarian  = PDF_predikatFromScore(nilaiHarian);
+      const hasNilaiHarian = d.nilaiCount > 0;
+		const nilaiHarian = hasNilaiHarian ? (d.nilaiSum/d.nilaiCount) : null;
+		const predHurufHarian = hasNilaiHarian
+		? PDF_predikatFromScore(nilaiHarian).huruf
+		: '-';
       const statusJuzHarian = PDF_totalAllJuzStatus(d.totalJuz, semesterSantri);
 
       return {
@@ -6754,13 +6759,15 @@ async function pdfSantriDownload(){
         totJuz: d.totalJuz ? d.totalJuz.toFixed(2) : '0.00',
 		murRange: fmtMurRange(d.murJuz || 0, (d.murJuz||0) > 0 ? 1 : 0),
         persen: statusJuzHarian.label,
-        nilai: nilaiHarian ? nilaiHarian.toFixed(1) : '-',
-        pred: predHarian.huruf
+        nilai: hasNilaiHarian ? nilaiHarian.toFixed(1) : '-',
+		pred: predHurufHarian
       };
     });
 
     // ==== Baris REKAP (slot-based) ====
-    const predTotal = PDF_predikatFromScore(nilaiAvg);
+    const predHurufTotal = hasNilaiTotal
+	? PDF_predikatFromScore(nilaiAvg).huruf
+	: '-';
     const setoranTotal = agg ? PDF_joinSAsegmentsNamaMerged(agg.saSegments) : '-';
     const juzTotalTxt  = agg ? PDF_joinRangeSegmentsCompact(agg.juzSegments, true) : '-';
 
@@ -6779,8 +6786,8 @@ async function pdfSantriDownload(){
       totJuz: totJuz.toFixed(2),
 	  murRange: fmtMurRange(murJuzTotal, murCountTotal),
       persen: statusJuzTotal.label,
-      nilai: nilaiAvg ? nilaiAvg.toFixed(1) : '-',
-      pred: predTotal.huruf
+      nilai: hasNilaiTotal ? nilaiAvg.toFixed(1) : '-',
+	  pred: predHurufTotal
     });
 
     // === PDF render ===
