@@ -460,7 +460,7 @@ button.lihat-quran-btn:hover::after {
 	
 <!-- HAPUS inline style="display:flex" agar tidak muncul saat awal load -->
 <div id="overlay"><span>
-<img src="https://raw.githubusercontent.com/muqoddammtb/web/main/Stopwatch.gif"></span>
+<img src="https://raw.githubusercontent.com/muqoddammtb/web/main/gear.gif"></span>
 </div>
 
 <div class="container"> 
@@ -4959,6 +4959,18 @@ if (typeof window.drawTableHeader !== 'function') {
     });
   }
 
+  // --- Whitelist berbasis roster (NIS/ID) ---
+function buildRosterWhitelist(santriData){
+  const allow = new Set();
+  for (const s of (santriData||[])) {
+    const nis = (s?.nis===0 || s?.nis) ? String(s.nis).trim() : "";
+    const id  = (s?.id===0  || s?.id)  ? String(s.id).trim()  : "";
+    if (nis) allow.add(nis);
+    if (id)  allow.add(id);
+  }
+  return allow;
+}
+
 // --- D1 helpers (sesuai getAbsensiRange.js yang kamu kirim) ---
 async function d1FetchAbsensi({ kelas, start, end, aggregate=false }) {
   const url = `/api/getAbsensiRange?kelas=${encodeURIComponent(kelas)}&start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}${aggregate ? '&aggregate=1' : ''}&t=${Date.now()}`;
@@ -5013,23 +5025,42 @@ async function d1FetchAbsensiAggMap({ kelas, start, end }) {
   }
 
   // 2) ROSTER
-  const resSantri = await fetch(`/api/getSantri?kelas=${encodeURIComponent(kelas)}&t=${Date.now()}`);
-  let santriData = await resSantri.json().catch(()=>[]);
-  if (!Array.isArray(santriData)) santriData = [];
+const resSantri = await fetch(`/api/getSantri?kelas=${encodeURIComponent(kelas)}&t=${Date.now()}`);
+let santriData = await resSantri.json().catch(()=>[]);
+if (!Array.isArray(santriData)) santriData = [];
 
-  // index helper
-  const keyId   = v => (v === 0 || v) ? String(v).trim() : "";
-  const keyNis  = v => (v === 0 || v) ? String(v).trim() : "";
-  const keyName = v => String(v || "").trim().toLowerCase();
-  const byIdMap = (arr, pick = x => x) => { const m = new Map(); for (const a of arr||[]) { const id = keyId(a?.id); if (id) m.set(id, pick(a)); } return m; };
-  const byNisMap = (arr, pick = x => x) => { const m = new Map(); for (const a of arr||[]) { const nis = keyNis(a?.nis); if (nis) m.set(nis, pick(a)); } return m; };
-  const byNameMap = (arr, pick = x => x) => { const m = new Map(); for (const a of arr||[]) { const nm = keyName(a?.nama); if (nm && !m.has(nm)) m.set(nm, pick(a)); } return m; };
-  const rosterById   = byIdMap(santriData, s => s);
-  const rosterByNis  = byNisMap(santriData, s => s);
-  const rosterByName = byNameMap(santriData, s => s);
+// >>> HARD WHITELIST berdasarkan roster
+const allowSet = buildRosterWhitelist(santriData);
 
-  // 3) Normalisasi raw + injeksi slot
-  const allDataNorm = rawList.map(r => {
+// index helper (tetap seperti semula)
+const keyId   = v => (v === 0 || v) ? String(v).trim() : "";
+const keyNis  = v => (v === 0 || v) ? String(v).trim() : "";
+const keyName = v => String(v || "").trim().toLowerCase();
+const byIdMap = (arr, pick = x => x) => { const m = new Map(); for (const a of arr||[]) { const id = keyId(a?.id); if (id) m.set(id, pick(a)); } return m; };
+const byNisMap = (arr, pick = x => x) => { const m = new Map(); for (const a of arr||[]) { const nis = keyNis(a?.nis); if (nis) m.set(nis, pick(a)); } return m; };
+const byNameMap = (arr, pick = x => x) => { const m = new Map(); for (const a of arr||[]) { const nm = keyName(a?.nama); if (nm && !m.has(nm)) m.set(nm, pick(a)); } return m; };
+const rosterById   = byIdMap(santriData, s => s);
+const rosterByNis  = byNisMap(santriData, s => s);
+const rosterByName = byNameMap(santriData, s => s);
+
+// 3) Normalisasi raw + injeksi slot
+const allDataNorm = rawList
+  // >>> BUANG SEMUA RECORD yang key-nya tidak ada di roster
+  .filter(r => {
+    const id  = keyId(r?.id ?? "");
+    const nis = keyNis(r?.nis ?? "");
+    // boleh lolos jika nis/id ada di allow; jika kosong bisa coba ditebak dari roster, tapi kalau tidak tertebak → drop
+    if (nis && allowSet.has(nis)) return true;
+    if (id  && allowSet.has(id))  return true;
+
+    // upaya terakhir: tebak NIS dari nama di roster, lalu cek ke allowSet
+    const nmK = keyName(r?.nama);
+    const guessNis = nmK && rosterByName.get(nmK)?.nis ? keyNis(rosterByName.get(nmK).nis) : "";
+    const guessId  = nmK && rosterByName.get(nmK)?.id  ? keyId(rosterByName.get(nmK).id)  : "";
+    return (guessNis && allowSet.has(guessNis)) || (guessId && allowSet.has(guessId));
+  })
+  .map(r => {
+    // …(blok normalisasi asli Anda, tidak berubah)…
     let id   = keyId(r?.id ?? "");
     let nis  = keyNis(r?.nis ?? "");
     const nmK = keyName(r?.nama);
@@ -5633,22 +5664,38 @@ window.PDF_joinRangeSegmentsCompact = PDF_joinRangeSegmentsCompact;
   if (!Array.isArray(rawList) || rawList.length === 0) return null;
 
   // 2) ROSTER
-  const resSantri = await fetch(`/api/getSantri?kelas=${encodeURIComponent(kelasKey)}&t=${Date.now()}`);
-  let santriData = await resSantri.json().catch(()=>[]);
-  if (!Array.isArray(santriData)) santriData = [];
+const resSantri = await fetch(`/api/getSantri?kelas=${encodeURIComponent(kelasKey)}&t=${Date.now()}`);
+let santriData = await resSantri.json().catch(()=>[]);
+if (!Array.isArray(santriData)) santriData = [];
 
-  const keyId   = v => (v === 0 || v) ? String(v).trim() : "";
-  const keyNis  = v => (v === 0 || v) ? String(v).trim() : "";
-  const keyName = v => String(v || "").trim().toLowerCase();
-  const byIdMap = (arr, pick = x => x) => { const m = new Map(); for (const a of arr||[]) { const id = keyId(a?.id); if (id) m.set(id, pick(a)); } return m; };
-  const byNisMap = (arr, pick = x => x) => { const m = new Map(); for (const a of arr||[]) { const nis = keyNis(a?.nis); if (nis) m.set(nis, pick(a)); } return m; };
-  const byNameMap = (arr, pick = x => x) => { const m = new Map(); for (const a of arr||[]) { const nm = keyName(a?.nama); if (nm && !m.has(nm)) m.set(nm, pick(a)); } return m; };
-  const rosterById   = byIdMap(santriData, s => s);
-  const rosterByNis  = byNisMap(santriData, s => s);
-  const rosterByName = byNameMap(santriData, s => s);
+// >>> HARD WHITELIST roster
+const allowSet = buildRosterWhitelist(santriData);
 
-  // 3) Normalisasi raw + injeksi slot
-  const allDataNorm = rawList.map(r => {
+// index helper (tetap)
+const keyId   = v => (v === 0 || v) ? String(v).trim() : "";
+const keyNis  = v => (v === 0 || v) ? String(v).trim() : "";
+const keyName = v => String(v || "").trim().toLowerCase();
+const byIdMap = (arr, pick = x => x) => { const m = new Map(); for (const a of arr||[]) { const id = keyId(a?.id); if (id) m.set(id, pick(a)); } return m; };
+const byNisMap = (arr, pick = x => x) => { const m = new Map(); for (const a of arr||[]) { const nis = keyNis(a?.nis); if (nis) m.set(nis, pick(a)); } return m; };
+const byNameMap = (arr, pick = x => x) => { const m = new Map(); for (const a of arr||[]) { const nm = keyName(a?.nama); if (nm && !m.has(nm)) m.set(nm, pick(a)); } return m; };
+const rosterById   = byIdMap(santriData, s => s);
+const rosterByNis  = byNisMap(santriData, s => s);
+const rosterByName = byNameMap(santriData, s => s);
+
+// 3) Normalisasi raw + injeksi slot
+const allDataNorm = rawList
+  // >>> hanya record yang ada di roster
+  .filter(r => {
+    const id  = keyId(r?.id ?? "");  const nis = keyNis(r?.nis ?? "");
+    if (nis && allowSet.has(nis)) return true;
+    if (id  && allowSet.has(id))  return true;
+    const nmK = keyName(r?.nama);
+    const guessNis = nmK && rosterByName.get(nmK)?.nis ? keyNis(rosterByName.get(nmK).nis) : "";
+    const guessId  = nmK && rosterByName.get(nmK)?.id  ? keyId(rosterByName.get(nmK).id)  : "";
+    return (guessNis && allowSet.has(guessNis)) || (guessId && allowSet.has(guessId));
+  })
+  .map(r => {
+    // …(blok normalisasi asli Anda, sama seperti sebelumnya)…
     let id   = keyId(r?.id ?? "");
     let nis  = keyNis(r?.nis ?? "");
     const nmK = keyName(r?.nama);
@@ -6308,7 +6355,7 @@ async function xlsRekapDownload(){
     return out.length ? out.join(', ') : '-';
   }
   function PDF_percentCapaian(totalJuzNum, semester){
-    const batasSemester = {1: 8, 2: 5, 3: 5, 4: 5, 5: 5, 6: 2};
+    const batasSemester = {1: 8, 2: 13, 3: 18, 4: 23, 5: 28, 6: 30};
     const total = Number(totalJuzNum);
     const sem   = Number(semester);
     if (!Number.isFinite(total)) return 0;
@@ -7019,7 +7066,6 @@ window._pdfSantriDownload = pdfSantriDownload;
 // ============================
 // B. DOWNLOAD DATA
 // ============================
-
 
 
 
@@ -8237,7 +8283,10 @@ if (Number.isFinite(scCand) && scCand > 0) {
         if(nis) byNis.set(nis,r);
       }
 
-      rows.forEach(tr=>{
+      	rows.forEach(tr=>{
+		// ⬇⬇⬇ Tambahan: batasi ke baris dengan tanggal yang sesuai
+		const rowTgl = String(tr.dataset?.tanggal || '').trim();
+		if (rowTgl && rowTgl !== tgl) return;
         const cell=tr.querySelector('.murajaah-cell'); if(!cell) return;
         const nis = String(tr.dataset?.nis||'').trim();
         const id  = String(tr.children?.[0]?.textContent||'').trim();
@@ -8326,7 +8375,7 @@ if (Number.isFinite(sNum) && sNum > 0) {
     if (typeof window.simpanDataMutabaah === 'function'){
       await window.simpanDataMutabaah($('#mur-save'));
       await refreshMurFromServer();
-      $('#mur-save-status').textContent='✅ Tersimpan';
+      $('#mur-save-status').textContent='🟢 Tersimpan';
       setTimeout(()=>$('#mur-save-status').textContent='',1500);
     }
   }catch(e){ console.error(e); $('#mur-save-status').textContent='❌ Gagal simpan'; }
@@ -8387,8 +8436,8 @@ if (window.currentRowEl){
   if (cell){
     cell.dataset[`score${idx}`] = '0';
     // opsional: langsung set label predikat sesuai 0 (ROSIB)
-    cell.dataset[`ptext${idx}`]  = getPredikat(0).text;
-    cell.dataset[`phuruf${idx}`] = getPredikat(0).huruf;
+    delete cell.dataset[`ptext${idx}`];
+	delete cell.dataset[`phuruf${idx}`];
   }
 }
 
@@ -8411,7 +8460,7 @@ if (window.currentRowEl){
         if (typeof window.murajaah?.refreshServer === 'function'){
           await window.murajaah.refreshServer();
         }
-        if (statusEl){ statusEl.textContent='✅ Reset ke kosong (0.00) & dilindungi dari server'; setTimeout(()=>statusEl.textContent='',1500); }
+        if (statusEl){ statusEl.textContent='🟢 Reset ke kosong (0.00) & dilindungi dari server'; setTimeout(()=>statusEl.textContent='',1500); }
       } else {
         if (statusEl){ statusEl.textContent='ℹ️ Di-reset lokal (tanpa simpan server)'; setTimeout(()=>statusEl.textContent='',1500); }
       }
@@ -8484,7 +8533,7 @@ if (window.currentRowEl){
     else { s=s.replace(/,/g,""); }
     const n = parseFloat(s); return Number.isFinite(n)?n:0;
   };
-  const BATAS = {1: 5, 2: 10, 3: 15, 4: 20, 5: 30};
+  const BATAS = {1: 8, 2: 13, 3: 18, 4: 23, 5: 28, 6: 30};
   const LS_KEY = k => `murRange:${k}`;
 
   function getSantriTable(){
@@ -8708,7 +8757,7 @@ if (window.currentRowEl){
       await saveRangeServer(kelas, dari, sampai, totalKeys);
       saveRangeLocal(kelas, dari, sampai);
 
-      $('#murRangeStatus') && ($('#murRangeStatus').textContent = "✅ Disimpan. Rentang ini akan otomatis terpakai saat refresh.");
+      $('#murRangeStatus') && ($('#murRangeStatus').textContent = "🟢 Disimpan. Rentang ini akan otomatis terpakai saat refresh.");
     }catch(err){
       console.error(err);
       $('#murRangeStatus') && ($('#murRangeStatus').textContent = "❌ " + (err?.message || err));
@@ -8753,7 +8802,7 @@ if (window.currentRowEl){
     if (kelas) resetRangeLocal(kelas);
 
     if (ok){
-      if (st) st.textContent = '✅ Sudah di-reset (server & lokal). Klik Save untuk memastikan tersimpan kosong.';
+      if (st) st.textContent = '🟢 Sudah di-reset (server & lokal). Klik Save untuk memastikan tersimpan kosong.';
     } else {
       if (st) st.textContent = '❌ Gagal hapus di server. Lihat Console.';
       alert('❌ Gagal reset di server. Cek Network/Console untuk detail.');
@@ -8778,14 +8827,14 @@ if (window.currentRowEl){
         if (kelas) resetRangeLocal(kelas);
         clearRangeBadgesInTable();
         if (!ok) throw new Error('reset server gagal');
-        if (st) st.textContent = '✅ Tersimpan: setelan dihapus (server & lokal).';
+        if (st) st.textContent = '🟢 Tersimpan: setelan dihapus (server & lokal).';
         return;
       }
 
       if (st) st.textContent = '⏳ Menyimpan setelan…';
       await saveRangeServer(kelas, fromDate, toDate, 0);
       try{ localStorage.setItem(LS_KEY(kelas), JSON.stringify({ fromDate, toDate, t: Date.now() })); }catch{}
-      if (st) st.textContent = '✅ Tersimpan.';
+      if (st) st.textContent = '🟢 Tersimpan.';
     }catch(e){
       console.error(e);
       if (st) st.textContent = '❌ Gagal menyimpan.';
@@ -8922,7 +8971,6 @@ if (window.currentRowEl){
 // D. MURAJAAH 3 SESI
 // ============================	
 </script>
-
 
 
 
@@ -10920,7 +10968,591 @@ document.addEventListener("DOMContentLoaded", () => {
 </script>
 
 
+<script>
+/* === [GRAFIK PROSENTASE THMS — PER HALAQOH + CACHING PER TANGGAL (PERMANEN) + REFRESH + PDF] === */
+(function grafikTHMS_boot(){
+  // ---- util: tunggu DOM siap
+  function onReady(fn){
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', fn, { once:true });
+    } else fn();
+  }
+  // ---- util: tunggu sampai .pdf-rekap-controls benar2 ada (untuk halaman dinamis/SPA)
+  function whenControlsExist(fn){
+    const el = document.querySelector('.pdf-rekap-controls');
+    if (el) return fn();
+    const mo = new MutationObserver(()=>{
+      const ok = document.querySelector('.pdf-rekap-controls');
+      if (ok) { mo.disconnect(); fn(); }
+    });
+    mo.observe(document.documentElement, { childList:true, subtree:true });
+    setTimeout(()=>mo.disconnect(), 10000); // fail-safe
+  }
 
+  onReady(()=> whenControlsExist(initGrafikTHMS));
+
+  function initGrafikTHMS(){
+    const wrap = document.querySelector('.pdf-rekap-controls');
+    if (!wrap) return console.warn('[THMS] .pdf-rekap-controls tidak ditemukan');
+    if (document.getElementById('btn-graph-thms')) return; // cegah duplikat
+
+    // ===== Tombol pemicu (Overlay)
+    const btn = document.createElement('button');
+    btn.id = 'btn-graph-thms';
+    btn.className = 'rekap-btn';
+    btn.style.background = '#16a34a';
+    btn.textContent = 'Live Grafik';
+    wrap.appendChild(btn);
+
+    // ===== Tombol PDF
+    const btnPdf = document.createElement('button');
+    btnPdf.id = 'btn-graph-thms-pdf';
+    btnPdf.className = 'rekap-btn';
+    btnPdf.style.background = '#0ea5e9';
+    btnPdf.textContent = 'PDF Grafik';
+    wrap.appendChild(btnPdf);
+
+    // ===== Style overlay (center)
+    if (!document.getElementById('thms-ov-style')) {
+      const s = document.createElement('style');
+      s.id = 'thms-ov-style';
+      s.textContent = `
+        .thms-ov{position:fixed; inset:0; z-index:9999; display:none; background:rgba(0,0,0,.5); align-items:center; justify-content:center; padding:16px}
+        .thms-ov[style*="display: block"]{ display:flex !important; }
+        .thms-sheet{position:relative; width:min(980px,94vw); max-height:90vh; overflow:auto; background:#fff; border-radius:16px; box-shadow:0 20px 50px rgba(0,0,0,.25); padding:14px}
+        .thms-handle{width:56px;height:5px;background:#e5e7eb;border-radius:999px;margin:2px auto 8px}
+        .thms-header{display:flex;align-items:center;justify-content:space-between;gap:10px}
+        .thms-title{font-weight:800;font-size:18px;color:#111827}
+        .thms-sub{color:#4b5563;font-size:13px;margin-top:2px}
+        .thms-actions{display:flex;gap:8px;align-items:center}
+        .thms-btn{border:none;border-radius:10px;padding:.5rem .8rem;cursor:pointer;font-weight:700}
+        .thms-close{background:#ef4444;color:#fff}
+        .thms-refresh{background:#2563eb;color:#fff}
+        .thms-cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+        @media (min-width:640px){ .thms-cards{grid-template-columns:repeat(5,1fr)} }
+        .thms-card{background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:10px}
+        .thms-card .t{font-size:12px;color:#6b7280}
+        .thms-card .v{font-weight:800;font-size:18px;color:#111827}
+        .thms-chart{margin-top:10px;background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:10px}
+        .thms-list{margin-top:12px;display:flex;flex-direction:column;gap:8px}
+        .thms-item{border:1px solid #e5e7eb;border-radius:10px;padding:8px;background:#fff}
+        .thms-item .row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+        .thms-item .name{font-weight:700;color:#111827}
+        .thms-item .pct{font-variant-numeric:tabular-nums;font-weight:800}
+        .thms-progress{height:8px;background:#f3f4f6;border-radius:999px;overflow:hidden;margin-top:6px}
+        .thms-progress > span{display:block;height:100%;background:#3b82f6}
+        .thms-cache-flag{font-size:11px;color:#059669;font-weight:700;margin-left:6px}
+        .thms-hide{position:absolute;left:-99999px;top:-99999px;width:960px;height:280px;pointer-events:none;opacity:0}
+      `;
+      document.head.appendChild(s);
+    }
+
+    // ===== Overlay DOM (Tanpa tab Jenjang) + tombol Refresh
+    function ensureOverlay(){
+      if (document.getElementById('thmsOverlay')) return;
+      const el = document.createElement('div');
+      el.id = 'thmsOverlay';
+      el.className = 'thms-ov';
+      el.innerHTML = `
+        <div class="thms-sheet" role="dialog" aria-modal="true" aria-labelledby="thmsTitleMain">
+          <div class="thms-handle"></div>
+          <div class="thms-header">
+            <div>
+              <div class="thms-title">
+                <span id="thmsTitleMain">Live Grafik</span>
+                <span id="thmsTitleMode">— Per Halaqoh (Ustadz)</span>
+                <span id="thmsCacheFlag" class="thms-cache-flag" style="display:none">(cache)</span>
+              </div>
+              <div id="thmsSub" class="thms-sub"></div>
+            </div>
+            <div class="thms-actions">
+              <button id="thmsRefresh" class="thms-btn thms-refresh" title="Perbarui data untuk tanggal ini">Perbaharui</button>
+              <button id="thmsClose" class="thms-btn thms-close">Tutup</button>
+            </div>
+          </div>
+
+          <div class="thms-cards">
+            <div class="thms-card"><div id="thmsCardKelompokTitle" class="t">Total Halaqoh</div><div id="thmsCardKelompok" class="v">-</div></div>
+            <div class="thms-card"><div class="t">Total Santri</div><div id="thmsCardSantri" class="v">-</div></div>
+            <div class="thms-card"><div class="t">Rata-rata Global</div><div id="thmsCardAvg" class="v">-</div></div>
+            <div class="thms-card"><div class="t">Tuntas</div><div id="thmsCardTuntas" class="v">-</div></div>
+            <div class="thms-card"><div class="t">Khatam</div><div id="thmsCardKhatam" class="v">-</div></div>
+          </div>
+
+          <div class="thms-chart"><canvas id="thmsChart" height="160"></canvas></div>
+          <div id="thmsList" class="thms-list"></div>
+        </div>
+      `;
+      document.body.appendChild(el);
+
+      const close = ()=> el.style.display='none';
+      document.addEventListener('keydown', (e)=>{
+        if (el.style.display==='block' && (e.key==='Escape' || e.key==='Esc')) {
+          e.stopPropagation(); e.preventDefault();
+        }
+      }, true);
+      el.querySelector('#thmsClose').addEventListener('click', close);
+    }
+
+    async function ensureChartJS(){
+      if (window.Chart) return;
+      await new Promise((res, rej)=>{
+        const s=document.createElement('script');
+        s.src='https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js';
+        s.onload=res; s.onerror=()=>rej(new Error('Gagal memuat Chart.js'));
+        document.head.appendChild(s);
+      });
+    }
+    async function ensureJsPDF(){
+      if (window.jspdf?.jsPDF) return;
+      await new Promise((res, rej)=>{
+        const s=document.createElement('script');
+        s.src='https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js';
+        s.onload=res; s.onerror=()=>rej(new Error('Gagal memuat jsPDF'));
+        document.head.appendChild(s);
+      });
+    }
+
+    // ====== Caching helpers — PERMANEN per rentang tanggal (tidak pakai TTL)
+    const CACHE_NS = 'THMS_GRAPH_V6KEY';
+    function fingerprintKeys(keys){ return keys.slice().map(String).sort().join('|'); }
+    function makeBaseKey(start, end, kelasKeys){ return `${CACHE_NS}|${start}|${end}|${fingerprintKeys(kelasKeys)}`; }
+    function cacheLoad(baseKey, mode){
+      try{
+        const raw = localStorage.getItem(`${baseKey}|${mode}`);
+        if (!raw) return null;
+        const obj = JSON.parse(raw);
+        return (obj && obj.payload) ? obj.payload : null;
+      }catch(e){ return null; }
+    }
+    function cacheSave(baseKey, mode, payload){
+      try{ localStorage.setItem(`${baseKey}|${mode}`, JSON.stringify({ t: Date.now(), payload })); }catch(e){}
+    }
+
+    // ===== Helper daftar kelas (aman)
+    function getAllKelasKeysSafe(){
+      if (typeof _getAllKelasKeys === 'function') {
+        const k = _getAllKelasKeys();
+        if (Array.isArray(k) && k.length) return k;
+      }
+      if (Array.isArray(window.ALL_KELAS_KEYS) && window.ALL_KELAS_KEYS.length){
+        return [...new Set(window.ALL_KELAS_KEYS.map(String))];
+      }
+      const el = (typeof kelasSelect !== 'undefined' && kelasSelect)
+               ? kelasSelect
+               : (document.getElementById('kelasSelect') || document.getElementById('kelas'));
+      let keys = [];
+      if (el?.options?.length) keys = [...el.options].map(o=>o.value).filter(Boolean);
+      const custom = window.namaKelasCustom || window.NAMA_KELAS_CUSTOM;
+      if (!keys.length && custom && typeof custom==='object') keys = Object.keys(custom);
+      if (!keys.length && el?.value) keys = [el.value];
+      keys = [...new Set(keys.map(String))].sort((a,b)=>{
+        const na = +(String(a).match(/(\d+)/)?.[1]||1e9);
+        const nb = +(String(b).match(/(\d+)/)?.[1]||1e9);
+        return na-nb || String(a).localeCompare(String(b),'id');
+      });
+      if (keys.length) window.ALL_KELAS_KEYS = keys;
+      return keys;
+    }
+
+    // ===== Label kelas (ustadz)
+    function getKelasLabel(k){
+      const el = (typeof kelasSelect !== 'undefined' && kelasSelect)
+               ? kelasSelect
+               : (document.getElementById('kelasSelect') || document.getElementById('kelas'));
+      const opt = el ? [...el.options].find(o=>o.value===k) : null;
+      if (opt && opt.textContent) return opt.textContent.trim();
+      const custom = window.namaKelasCustom || window.NAMA_KELAS_CUSTOM || {};
+      if (custom[k]) return String(custom[k]);
+      if (typeof _kelasKelompokLineFor === 'function') {
+        return _kelasKelompokLineFor(k)?.line?.replace(/^Halaqoh:\s*/,'') || k;
+      }
+      return k;
+    }
+
+    // ===== Roster & whitelist
+    async function getRosterForClass(kelasKey){
+      const r = await fetch(`/api/getSantri?kelas=${encodeURIComponent(kelasKey)}&t=${Date.now()}`).catch(()=>null);
+      const roster = await r?.json().catch(()=>[]);
+      return Array.isArray(roster) ? roster : [];
+    }
+    function makeAllowSet(roster){
+      if (typeof buildRosterWhitelist === 'function') return buildRosterWhitelist(roster);
+      const allow = new Set();
+      for (const s of (roster||[])) {
+        const nis = (s?.nis===0 || s?.nis) ? String(s.nis).trim() : "";
+        const id  = (s?.id===0  || s?.id)  ? String(s.id).trim()  : "";
+        if (nis) allow.add(nis);
+        if (id)  allow.add(id);
+      }
+      return allow;
+    }
+
+    // ===== Fallback: agregat D1 + roster (TERFILTER whitelist)
+    async function fetchAggOnlyRows(kelasKey, startDate, endDate){
+      const url = `/api/getAbsensiRange?kelas=${encodeURIComponent(kelasKey)}&start=${encodeURIComponent(startDate)}&end=${encodeURIComponent(endDate)}&aggregate=1&t=${Date.now()}`;
+      const r1  = await fetch(url).catch(()=>null);
+      const j1  = await r1?.json().catch(()=>null);
+      if (!j1 || !j1.aggregate || !Array.isArray(j1.list)) return [];
+
+      const roster = await getRosterForClass(kelasKey);
+      const allow  = makeAllowSet(roster);
+      const byNis = new Map(), byId = new Map();
+      for (const s of roster){
+        const nis = (s?.nis===0 || s?.nis) ? String(s.nis).trim() : "";
+        const id  = (s?.id===0  || s?.id)  ? String(s.id).trim()  : "";
+        if (nis) byNis.set(nis, s);
+        if (id)  byId.set(id, s);
+      }
+
+      const out = [];
+      for (const it of j1.list){
+        const key = String(it?.key||'').trim();
+        if (!key || !allow.has(key)) continue;
+        const totalJuz = Number(it?.totalJuz || it?.total_juz_num || 0);
+        const s = byNis.get(key) || byId.get(key) || {};
+        out.push({
+          totalJuz,
+          semester: (s?.semester!=null) ? Number(s.semester) : null,
+          jenjang : s?.jenjang ?? null
+        });
+      }
+      return out;
+    }
+
+    // ===== Ambil rows per kelas (universal + fallback) — TERFILTER whitelist
+    async function getRowsForClass(kelasKey, startDate, endDate){
+      const roster = await getRosterForClass(kelasKey);
+      const allow  = makeAllowSet(roster);
+
+      if (typeof collectRekapDataForClass === 'function') {
+        const data = await collectRekapDataForClass(kelasKey, startDate, endDate).catch(()=>null);
+        if (data?.rows?.length) {
+          return data.rows
+            .filter(r => {
+              const key = (r?.nis && String(r.nis).trim())
+                       || (r?.id  && String(r.id).trim())
+                       || '';
+              return key && allow.has(key);
+            })
+            .map(r => ({
+              totalJuz: Number(r.totalJuz||0),
+              semester: r.semester,
+              jenjang : r.jenjang
+            }));
+        }
+      }
+      return await fetchAggOnlyRows(kelasKey, startDate, endDate).catch(()=>[]);
+    }
+
+    // Quick helper: percent
+    function getPercent(r){
+      if (typeof PDF_totalAllJuzStatus==='function'){
+        return PDF_totalAllJuzStatus(Number(r.totalJuz||0), r.semester)?.percent || 0;
+      }
+      if (typeof PDF_percentCapaian==='function'){
+        return PDF_percentCapaian(Number(r.totalJuz||0), r.semester) || 0;
+      }
+      return 0;
+    }
+
+    // ======= Komputasi: Per Halaqoh (kelas)
+    async function computeByKelas(startDate, endDate, kelasKeys){
+      const rows = [];
+      for (const k of kelasKeys){
+        const rowsKelas = await getRowsForClass(k, startDate, endDate);
+        let sum=0, n=0, kh=0, tn=0;
+        for (const r of rowsKelas){
+          const pct = getPercent(r);
+          const isKhatam = Number(r.totalJuz||0) >= 30;
+          const isTuntas = !isKhatam && pct >= 100;
+          sum += pct; n++; if (isKhatam) kh++; else if (isTuntas) tn++;
+        }
+        rows.push({
+          label: getKelasLabel(k),
+          avg: n? (sum/n) : 0,
+          khatam: kh,
+          tuntas: tn,
+          count: n
+        });
+      }
+      rows.sort((a,b)=> a.label.localeCompare(b.label, 'id'));
+      return { rows, startDate, endDate, mode: 'kelas' };
+    }
+
+    // ======= Chart ctx guard
+    function getChartCtx(){
+      const c = document.getElementById('thmsChart');
+      const ctx = c && c.getContext && c.getContext('2d');
+      if (!ctx) throw new Error('Canvas context tidak tersedia');
+      return ctx;
+    }
+
+    // ======= Render (hanya mode Kelas)
+    let _chart = null;
+    function renderView(payload, fromCache=false){
+      const { rows, startDate, endDate } = payload;
+      const ov = document.getElementById('thmsOverlay');
+      ov.style.display = 'block';
+
+      document.getElementById('thmsTitleMode').textContent = '— Per Halaqoh (Ustadz)';
+      const fmt = (window.fmtD_M_YYYY || (x=>x));
+      document.getElementById('thmsSub').textContent = `Periode: ${fmt(startDate)} s.d. ${fmt(endDate)}`;
+      document.getElementById('thmsCacheFlag').style.display = fromCache ? '' : 'none';
+
+      document.getElementById('thmsCardKelompokTitle').textContent = 'Total Halaqoh';
+
+      const totalGroupsShown = rows.length;
+      const totalSantri = rows.reduce((s,r)=>s+r.count,0);
+      const totalKhatam = rows.reduce((s,r)=>s+r.khatam,0);
+      const totalTuntas = rows.reduce((s,r)=>s+r.tuntas,0);
+      const avgGlobal   = rows.length ? Math.round(rows.reduce((s,r)=>s+r.avg,0)/rows.length) : 0;
+
+      document.getElementById('thmsCardKelompok').textContent = totalGroupsShown;
+      document.getElementById('thmsCardSantri').textContent   = totalSantri;
+      document.getElementById('thmsCardAvg').textContent      = `${avgGlobal}%`;
+      document.getElementById('thmsCardTuntas').textContent   = totalTuntas;
+      document.getElementById('thmsCardKhatam').textContent   = totalKhatam;
+
+      const labels = rows.map(r=>r.label);
+      const data   = rows.map(r=>Math.round(r.avg));
+      const ctx    = getChartCtx();
+      if (_chart) { _chart.destroy(); _chart=null; }
+      _chart = new Chart(ctx, {
+        type:'bar',
+        data:{ labels, datasets:[{ label:'Rata-rata THMS (%)', data }] },
+        options:{
+          responsive:true, maintainAspectRatio:false,
+          scales:{ y:{ beginAtZero:true, max:100, ticks:{ stepSize:10 } } },
+          plugins:{
+            legend:{ display:false },
+            tooltip:{ callbacks:{ footer:(items)=>{
+              const i = items[0].dataIndex, r = rows[i];
+              return `Santri: ${r.count} | Tuntas: ${r.tuntas} | Khatam: ${r.khatam}`;
+            }}}
+          }
+        }
+      });
+
+      const list = document.getElementById('thmsList');
+      list.innerHTML = '';
+      rows.forEach(r=>{
+        const pct = Math.round(r.avg);
+        const item = document.createElement('div');
+        item.className = 'thms-item';
+        item.innerHTML = `
+          <div class="row">
+            <div class="name">${r.label}</div>
+            <div class="pct">${pct}%</div>
+          </div>
+          <div class="thms-progress"><span style="width:${Math.min(100, Math.max(0, pct))}%"></span></div>
+          <div class="thms-sub" style="margin-top:4px">Santri: ${r.count} · Tuntas: ${r.tuntas} · Khatam: ${r.khatam}</div>
+        `;
+        list.appendChild(item);
+      });
+    }
+
+    // ======= State untuk refresh
+    let _lastStart = null, _lastEnd = null, _lastKelasKeys = null;
+
+    // ======= Compute helper (pakai cache atau paksa fresh)
+    function makeBaseFromInputs(){
+      const startDate = _lastStart ?? document.querySelector('#pdf-start-date')?.value;
+      const endDate   = _lastEnd   ?? document.querySelector('#pdf-end-date')?.value;
+      if (!startDate || !endDate) throw new Error('Mohon pilih tanggal mulai & akhir.');
+      const kelasKeys = _lastKelasKeys ?? getAllKelasKeysSafe();
+      if (!kelasKeys.length) throw new Error('Tidak menemukan daftar kelas.');
+      const baseKey = makeBaseKey(startDate, endDate, kelasKeys);
+      return { baseKey, startDate, endDate, kelasKeys };
+    }
+
+    async function computeMaybeCached({ forceFresh = false } = {}){
+      const { baseKey, startDate, endDate, kelasKeys } = makeBaseFromInputs();
+      let payload = !forceFresh ? cacheLoad(baseKey, 'kelas') : null;
+      if (!payload){
+        payload = await computeByKelas(startDate, endDate, kelasKeys);
+        cacheSave(baseKey, 'kelas', payload);
+      }
+      _lastStart = startDate; _lastEnd = endDate; _lastKelasKeys = kelasKeys;
+      return { payload, fromCache: !forceFresh && !!cacheLoad(baseKey, 'kelas') };
+    }
+
+    // ======= Click handler Overlay
+    async function openOverlay(){
+      btn.disabled = true; btn.textContent = 'Memuat grafik…';
+      try{
+        ensureOverlay(); await ensureChartJS();
+        const { payload, fromCache } = await computeMaybeCached({ forceFresh:false });
+        renderView(payload, fromCache);
+
+        // Bind tombol Refresh (sekali saja)
+        const refBtn = document.getElementById('thmsRefresh');
+        if (!refBtn.dataset.bound){
+          refBtn.dataset.bound = '1';
+          refBtn.addEventListener('click', async ()=>{
+            const prev = refBtn.textContent;
+            refBtn.disabled = true; refBtn.textContent = 'Menyegarkan…';
+            try{
+              const { payload } = await computeMaybeCached({ forceFresh:true });
+              renderView(payload, false);
+              document.getElementById('thmsCacheFlag').style.display = 'none';
+            } catch(e){
+              console.error(e);
+              alert('Gagal menyegarkan data: ' + (e.message||e));
+            } finally {
+              refBtn.disabled = false; refBtn.textContent = prev;
+            }
+          });
+        }
+      } catch(e){
+        console.error(e);
+        alert('Gagal menampilkan grafik: ' + (e.message||e));
+      } finally {
+        btn.disabled = false; btn.textContent = 'Live Grafik';
+      }
+    }
+
+    // ======= PDF: render chart offscreen + generate PDF
+    function makeHiddenCanvas(){
+      const c = document.createElement('canvas');
+      c.width = 1200; c.height = 360; // resolusi bagus untuk PDF
+      c.className = 'thms-hide';
+      document.body.appendChild(c);
+      return c;
+    }
+    function destroyCanvas(c){ try{ c.remove(); }catch(_){} }
+
+    async function buildChartImage(rows){
+      await ensureChartJS();
+      const labels = rows.map(r=>r.label);
+      const data   = rows.map(r=>Math.round(r.avg));
+      const c = makeHiddenCanvas();
+      const ctx = c.getContext('2d');
+      const chart = new Chart(ctx, {
+        type:'bar',
+        data:{ labels, datasets:[{ label:'Rata-rata THMS (%)', data }] },
+        options:{
+          animation:false, responsive:false, maintainAspectRatio:false,
+          scales:{ y:{ beginAtZero:true, max:100, ticks:{ stepSize:10 } } },
+          plugins:{ legend:{ display:false } }
+        }
+      });
+      // pastikan sudah render
+      await new Promise(r=>requestAnimationFrame(()=>r()));
+      const img = chart.toBase64Image('image/png', 1.0);
+      chart.destroy();
+      destroyCanvas(c);
+      return img;
+    }
+
+    async function downloadPdf(){
+      // tombol state
+      const prev = btnPdf.textContent;
+      btnPdf.disabled = true; btnPdf.textContent = 'Menyusun PDF…';
+      try{
+        await ensureJsPDF();
+        const { jsPDF } = window.jspdf;
+        const { payload, fromCache } = await computeMaybeCached({ forceFresh:false });
+        const { rows, startDate, endDate } = payload;
+
+        // kartu ringkas
+        const totalGroupsShown = rows.length;
+        const totalSantri = rows.reduce((s,r)=>s+r.count,0);
+        const totalKhatam = rows.reduce((s,r)=>s+r.khatam,0);
+        const totalTuntas = rows.reduce((s,r)=>s+r.tuntas,0);
+        const avgGlobal   = rows.length ? Math.round(rows.reduce((s,r)=>s+r.avg,0)/rows.length) : 0;
+
+        const chartImg = await buildChartImage(rows);
+
+        // PDF A4 portrait
+        const doc = new jsPDF({ unit:'pt', format:'a4', compress:true });
+        const pageW = doc.internal.pageSize.getWidth();
+        const margin = 36;
+
+        // Header
+        doc.setFont('helvetica','bold'); doc.setFontSize(14);
+        doc.text('Live Grafik THMS — Per Halaqoh (Ustadz)', margin, 40);
+        doc.setFont('helvetica','normal'); doc.setFontSize(11);
+        const fmt = (window.fmtD_M_YYYY || (x=>x));
+        doc.text(`Periode: ${fmt(startDate)} s.d. ${fmt(endDate)}${fromCache?'  (cache)':''}`, margin, 58);
+
+        // Kartu ringkas (grid 5 kolom)
+        const yCardsTop = 78, hCard = 48, gap = 10, cols = 5;
+        const colW = (pageW - margin*2 - gap*(cols-1)) / cols;
+        const cards = [
+          ['Total Halaqoh', String(totalGroupsShown)],
+          ['Total Santri', String(totalSantri)],
+          ['Rata-rata Global', `${avgGlobal}%`],
+          ['Tuntas', String(totalTuntas)],
+          ['Khatam', String(totalKhatam)],
+        ];
+        doc.setDrawColor(230); doc.setLineWidth(0.8);
+        cards.forEach((c, i)=>{
+          const x = margin + i*(colW+gap);
+          doc.setFillColor(249,250,251); // f9fafb
+          doc.roundedRect(x, yCardsTop, colW, hCard, 6, 6, 'FD');
+          doc.setFontSize(9); doc.setTextColor(107,114,128); // slate-500
+          doc.text(c[0], x+10, yCardsTop+18);
+          doc.setTextColor(17,24,39); doc.setFont('helvetica','bold'); doc.setFontSize(14);
+          doc.text(c[1], x+10, yCardsTop+38);
+          doc.setFont('helvetica','normal'); doc.setTextColor(0,0,0);
+        });
+
+        // Chart image
+        const chartY = yCardsTop + hCard + 18;
+        const chartW = pageW - margin*2;
+        const chartH = 220;
+        doc.addImage(chartImg, 'PNG', margin, chartY, chartW, chartH);
+
+        // Tabel ringkas (nama, % , Santri, Tuntas, Khatam)
+        let y = chartY + chartH + 22;
+        const lineH = 16;
+        function headerRow(){
+          doc.setFont('helvetica','bold'); doc.setFontSize(10);
+          doc.text('Halaqoh', margin, y);
+          doc.text('%', margin+300, y, { align:'right' });
+          doc.text('Santri', margin+360, y, { align:'right' });
+          doc.text('Tuntas', margin+430, y, { align:'right' });
+          doc.text('Khatam', margin+500, y, { align:'right' });
+          doc.setFont('helvetica','normal'); doc.setFontSize(10);
+          y += 6; doc.setDrawColor(230); doc.line(margin, y, pageW - margin, y); y += 10;
+        }
+        headerRow();
+        for (const r of rows){
+          if (y > doc.internal.pageSize.getHeight() - 48){
+            doc.addPage(); y = margin; headerRow();
+          }
+          const pct = Math.round(r.avg);
+          doc.text(String(r.label), margin, y);
+          doc.text(`${pct}%`, margin+300, y, { align:'right' });
+          doc.text(String(r.count), margin+360, y, { align:'right' });
+          doc.text(String(r.tuntas), margin+430, y, { align:'right' });
+          doc.text(String(r.khatam), margin+500, y, { align:'right' });
+          y += lineH;
+        }
+
+        // Footer kecil
+        doc.setFontSize(8); doc.setTextColor(120);
+        doc.text('Generated by Rapor Tahfiz — PDF Grafik THMS', margin, doc.internal.pageSize.getHeight()-20);
+
+        // Filename
+        const safe = (s)=>String(s||'').replace(/[^\w\-]+/g,'_');
+        const fname = `GrafikProsentase_THMS_${safe(startDate)}_sd_${safe(endDate)}.pdf`;
+        doc.save(fname);
+      } catch(e){
+        console.error(e);
+        alert('Gagal membuat PDF: ' + (e.message||e));
+      } finally {
+        btnPdf.disabled = false; btnPdf.textContent = prev;
+      }
+    }
+
+    // ====== Bind tombol
+    btn.addEventListener('click', openOverlay);
+    btnPdf.addEventListener('click', downloadPdf);
+  }
+})();
+</script>
 
 
 </body>
