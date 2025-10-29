@@ -2798,7 +2798,7 @@ logoutBtn.addEventListener("click", () => {
   // Konfigurasi global yang bisa dioverride sebelum loadSantriData jalan
   window.ABS_FLEX_CFG = window.ABS_FLEX_CFG || {
     statuses: ["hadir","izin","sakit","alpha"],
-    perStatus: Number(window.ABS_FLEX_PER_STATUS ?? 1), // default 2 unit per status (hadir1..2, dst)
+    perStatus: Number(window.ABS_FLEX_PER_STATUS ?? 6), // default 2 unit per status (hadir1..2, dst)
 	defaultTarget: 1,                                   // default denominator
     maxTarget: 1,                                       // denominator 1..6
     labels: null                                        // {hadir:[...], izin:[...], ...] (opsional)
@@ -2826,7 +2826,7 @@ logoutBtn.addEventListener("click", () => {
     const Title   = st.charAt(0).toUpperCase() + st.slice(1);
     const idx     = i - 1;
     const per     = ABS_FLEX_CFG.perStatus|0;
-    const sesiAll = ["Sesi"];
+    const sesiAll = ["Subuh","Pagi","Sore","Malam","Ekstra 1","Ekstra 2"];
 
     // Legacy: jika tetap 2 sesi, pertahankan Pagi/Sore
     if (per === 2){
@@ -3060,7 +3060,7 @@ async function loadSantriData() {
   overlay.style.display = "flex";
 
   // ===== util jenjang (tetap) =====
-  const JENJANG_MAX = Number(window.JENJANG_MAX ?? 32);
+  const JENJANG_MAX = Number(window.JENJANG_MAX ?? 9);
 
   const parseJenjang = (v) => {
     const m = /^A(\d+)$/.exec(String(v || "").trim());
@@ -3496,38 +3496,12 @@ async function loadSantriData() {
           <td class="col-nama">${santri.nama ?? ""}${subTanggal}</td>
           <td>
             <select class="jenjang">
-    <option value="A1" ${jenNow === 'A1' ? 'selected' : ''}>ILA</option>
-    <option value="A2" ${jenNow === 'A2' ? 'selected' : ''}>ILB</option>
-    <option value="A3" ${jenNow === 'A3' ? 'selected' : ''}>ILC</option>
-    <option value="A4" ${jenNow === 'A4' ? 'selected' : ''}>ILD</option>
-    <option value="A5" ${jenNow === 'A5' ? 'selected' : ''}>1A IM</option>
-    <option value="A6" ${jenNow === 'A6' ? 'selected' : ''}>1B IM</option>
-    <option value="A7" ${jenNow === 'A7' ? 'selected' : ''}>1C IM</option>
-    <option value="A8" ${jenNow === 'A8' ? 'selected' : ''}>1D IM</option>
-    <option value="A9" ${jenNow === 'A9' ? 'selected' : ''}>1E IM</option>
-    <option value="A10" ${jenNow === 'A10' ? 'selected' : ''}>1F IM</option>
-    <option value="A11" ${jenNow === 'A11' ? 'selected' : ''}>1G IM</option>
-    <option value="A12" ${jenNow === 'A12' ? 'selected' : ''}>1H IM</option>
-    <option value="A13" ${jenNow === 'A13' ? 'selected' : ''}>1I IM</option>
-    <option value="A14" ${jenNow === 'A14' ? 'selected' : ''}>1J IM</option>
-    <option value="A15" ${jenNow === 'A15' ? 'selected' : ''}>2A IM</option>
-    <option value="A16" ${jenNow === 'A16' ? 'selected' : ''}>2B IM</option>
-    <option value="A17" ${jenNow === 'A17' ? 'selected' : ''}>2C IM</option>
-    <option value="A18" ${jenNow === 'A18' ? 'selected' : ''}>2D IM</option>
-    <option value="A19" ${jenNow === 'A19' ? 'selected' : ''}>2E IM</option>
-    <option value="A20" ${jenNow === 'A20' ? 'selected' : ''}>2F IM</option>
-    <option value="A21" ${jenNow === 'A21' ? 'selected' : ''}>2G IM</option>
-    <option value="A22" ${jenNow === 'A22' ? 'selected' : ''}>2H IM</option>
-    <option value="A23" ${jenNow === 'A23' ? 'selected' : ''}>2I IM</option>
-    <option value="A24" ${jenNow === 'A24' ? 'selected' : ''}>3A IM</option>
-    <option value="A25" ${jenNow === 'A25' ? 'selected' : ''}>3B IM</option>
-    <option value="A26" ${jenNow === 'A26' ? 'selected' : ''}>3C IM</option>
-    <option value="A27" ${jenNow === 'A27' ? 'selected' : ''}>3D IM</option>
-    <option value="A28" ${jenNow === 'A28' ? 'selected' : ''}>3E IM</option>
-    <option value="A29" ${jenNow === 'A29' ? 'selected' : ''}>3F IM</option>
-    <option value="A30" ${jenNow === 'A30' ? 'selected' : ''}>3G IM</option>
-    <option value="A31" ${jenNow === 'A31' ? 'selected' : ''}>3H IM</option>
-    <option value="A32" ${jenNow === 'A32' ? 'selected' : ''}>3I IM</option>
+    <option value="A1" ${jenNow === 'A1' ? 'selected' : ''}>1 SMP</option>
+    <option value="A2" ${jenNow === 'A2' ? 'selected' : ''}>2 SMP</option>
+    <option value="A3" ${jenNow === 'A3' ? 'selected' : ''}>3 SMP</option>
+    <option value="A4" ${jenNow === 'A4' ? 'selected' : ''}>1 MA</option>
+    <option value="A5" ${jenNow === 'A5' ? 'selected' : ''}>2 MA</option>
+    <option value="A6" ${jenNow === 'A6' ? 'selected' : ''}>3 MA</option>
   </select>
           </td>
           <td>
@@ -3537,7 +3511,6 @@ async function loadSantriData() {
     <option value="3" ${String(semNow) === '3' ? 'selected' : ''}>3</option>
     <option value="4" ${String(semNow) === '4' ? 'selected' : ''}>4</option>
     <option value="5" ${String(semNow) === '5' ? 'selected' : ''}>5</option>
-    <option value="6" ${String(semNow) === '6' ? 'selected' : ''}>6</option>
   </select>
           </td>
 
