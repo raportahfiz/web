@@ -8704,7 +8704,7 @@ if (window.currentRowEl){
         const pSum = p1 + p2 + p3;
 
         let totalLabel = `${totalNum.toFixed(2)}&nbsp;juz`;
-        if (totalNum >= 30) totalLabel = `<span style="color:#7c3aed;font-weight:600">KHATAM</span> (${totalNum.toFixed(2)} juz)`;
+        if (totalNum >= 99999999999999999999999999) totalLabel = `<span style="color:#7c3aed;font-weight:600">KHATAM</span> (${totalNum.toFixed(2)} juz)`;
 
 		var count = Number(rec && rec.cAll ? rec.cAll : 0);
 var btnEnabled = count > 0;
@@ -8982,24 +8982,26 @@ var btnStyle = btnEnabled
   }
 
   // Peta warna untuk predikat huruf
-  function predStyle(p){
-    var t = (p==null?'':String(p)).toUpperCase().trim();
-    if (t === 'A+') return { bg:'#dcfce7', fg:'#166534', br:'#86efac' }; // green-100
-    if (t === 'A')  return { bg:'#eafaf0', fg:'#166534', br:'#a7f3d0' }; // slightly paler green
-    if (t === 'B')  return { bg:'#dbeafe', fg:'#1e3a8a', br:'#93c5fd' }; // blue-100
-    if (t === 'C')  return { bg:'#ffedd5', fg:'#9a3412', br:'#fdba74' }; // orange-100
-    if (t === 'D')  return { bg:'#ffe4e6', fg:'#9f1239', br:'#fecdd3' }; // rose-100
-    return null;
-  }
+function predStyle(p){
+  var t = (p==null?'':String(p)).toUpperCase().trim();
+  if (t === 'A+') return { bg:'#dcfce7', fg:'#166534', br:'#86efac' }; // hijau muda
+  if (t === 'A')  return { bg:'#eafaf0', fg:'#166534', br:'#a7f3d0' }; // hijau lebih pucat
+  if (t === 'B')  return { bg:'#dbeafe', fg:'#1e3a8a', br:'#93c5fd' }; // biru muda
+  if (t === 'C')  return { bg:'#ffedd5', fg:'#9a3412', br:'#fdba74' }; // oranye muda
+  if (t === 'D')  return { bg:'#ffe4e6', fg:'#9f1239', br:'#fecdd3' }; // merah muda
+  return null;
+}
 
-  // Bungkus konten sesi dengan badge warna (jika ada pHuruf)
-  function renderSessionHTML(s){
-    // gunakan sesLine(s) yang sudah ada untuk teksnya
-    var inner = sesLine(s);
-    var st = s ? predStyle(s.pHuruf) : null;
-    if (!st) return inner || '-';
-    return '<div style="display:inline-block;border-radius:8px;padding:6px 8px;border:1px solid '+st.br+';background:'+st.bg+';color:'+st.fg+'">'+ inner +'</div>';
-  }
+// Fallback: konversi skor → huruf (kalau pHuruf kosong)
+function hurufFromScore(sc){
+  var s = Math.max(0, Math.min(100, Math.floor(Number(sc)||0)));
+  if (s === 0) return '';          // 0 = tidak ada predikat
+  if (s <= 59) return 'D';
+  if (s <= 69) return 'C';
+  if (s <= 79) return 'B';
+  if (s <= 89) return 'A';
+  return 'A+';
+}
 
   function sesLine(s){
     if (!s) return '-';
@@ -9017,20 +9019,108 @@ var btnStyle = btnEnabled
   }
 
   function extractSessions(rec){
-    function s(i){
-      return {
-        from:  (rec['murFrom'+i]  != null ? rec['murFrom'+i]  : (rec.murSessions && rec.murSessions[i-1] ? rec.murSessions[i-1].from  : (i===1?rec.murFrom:undefined))) || '',
-        to:    (rec['murTo'+i]    != null ? rec['murTo'+i]    : (rec.murSessions && rec.murSessions[i-1] ? rec.murSessions[i-1].to    : (i===1?rec.murTo:undefined)))   || '',
-        pages: (rec['murPages'+i] != null ? rec['murPages'+i] : (rec.murSessions && rec.murSessions[i-1] ? rec.murSessions[i-1].pages : (i===1?rec.murPages:undefined)))|| '',
-        juz:   (rec['juzmur'+i]   != null ? rec['juzmur'+i]   : (rec['juzSesi'+i] != null ? rec['juzSesi'+i] : (rec.murSessions && rec.murSessions[i-1] ? rec.murSessions[i-1].juz : undefined))),
-        score: (rec['murScore'+i] != null ? rec['murScore'+i] : (rec.murSessions && rec.murSessions[i-1] ? rec.murSessions[i-1].score : undefined)),
-        pHuruf:(rec['murPredHuruf'+i] != null ? rec['murPredHuruf'+i] : (rec.murSessions && rec.murSessions[i-1] ? rec.murSessions[i-1].predikatHuruf : ''))
-      };
-    }
-    var s1=s(1), s2=s(2), s3=s(3);
-    var total = num(rec.juzmurajaah!=null ? rec.juzmurajaah : (rec.totalJuz!=null ? rec.totalJuz : (num(s1.juz)+num(s2.juz)+num(s3.juz))));
-    return { s1:s1, s2:s2, s3:s3, total: total };
+  function s(i){
+    return {
+      from:  (rec['murFrom'+i]  != null ? rec['murFrom'+i]  : (rec.murSessions && rec.murSessions[i-1] ? rec.murSessions[i-1].from  : (i===1?rec.murFrom:undefined))) || '',
+      to:    (rec['murTo'+i]    != null ? rec['murTo'+i]    : (rec.murSessions && rec.murSessions[i-1] ? rec.murSessions[i-1].to    : (i===1?rec.murTo:undefined)))   || '',
+      pages: (rec['murPages'+i] != null ? rec['murPages'+i] : (rec.murSessions && rec.murSessions[i-1] ? rec.murSessions[i-1].pages : (i===1?rec.murPages:undefined)))|| '',
+      juz:   (rec['juzmur'+i]   != null ? rec['juzmur'+i]   : (rec['juzSesi'+i] != null ? rec['juzSesi'+i] : (rec.murSessions && rec.murSessions[i-1] ? rec.murSessions[i-1].juz : undefined))),
+      score: (rec['murScore'+i] != null ? rec['murScore'+i] : (rec.murSessions && rec.murSessions[i-1] ? rec.murSessions[i-1].score : undefined)),
+      pHuruf:(rec['murPredHuruf'+i] != null ? rec['murPredHuruf'+i] : (rec.murSessions && rec.murSessions[i-1] ? rec.murSessions[i-1].predikatHuruf : '')),
+      jFrom: (rec['jFrom'+i] != null ? rec['jFrom'+i] : (rec.murSessions && rec.murSessions[i-1] ? rec.murSessions[i-1].jFrom : undefined)),
+      jTo:   (rec['jTo'+i]   != null ? rec['jTo'+i]   : (rec.murSessions && rec.murSessions[i-1] ? rec.murSessions[i-1].jTo   : undefined))
+    };
   }
+  var s1=s(1), s2=s(2), s3=s(3);
+  var total = num(rec.juzmurajaah!=null ? rec.juzmurajaah : (rec.totalJuz!=null ? rec.totalJuz : (num(s1.juz)+num(s2.juz)+num(s3.juz))));
+  return { s1:s1, s2:s2, s3:s3, total: total };
+}
+
+	// === JUZ META & helper posisi juz (biarkan seperti sebelumnya) ===
+var JUZ_META = {
+  1:{ sFrom:1,aFrom:1,sTo:2,aTo:141 },  2:{ sFrom:2,aFrom:142,sTo:2,aTo:252 },
+  3:{ sFrom:2,aFrom:253,sTo:3,aTo:92 }, 4:{ sFrom:3,aFrom:93,sTo:4,aTo:23 },
+  5:{ sFrom:4,aFrom:24,sTo:4,aTo:147 }, 6:{ sFrom:4,aFrom:148,sTo:5,aTo:81 },
+  7:{ sFrom:5,aFrom:82,sTo:6,aTo:110 }, 8:{ sFrom:6,aFrom:111,sTo:7,aTo:87 },
+  9:{ sFrom:7,aFrom:88,sTo:8,aTo:40 }, 10:{ sFrom:8,aFrom:41,sTo:9,aTo:92 },
+ 11:{ sFrom:9,aFrom:93,sTo:11,aTo:5 }, 12:{ sFrom:11,aFrom:6,sTo:12,aTo:52 },
+ 13:{ sFrom:12,aFrom:53,sTo:14,aTo:52 },14:{ sFrom:15,aFrom:1,sTo:16,aTo:128 },
+ 15:{ sFrom:17,aFrom:1,sTo:18,aTo:74 },16:{ sFrom:18,aFrom:75,sTo:20,aTo:135 },
+ 17:{ sFrom:21,aFrom:1,sTo:22,aTo:78 },18:{ sFrom:23,aFrom:1,sTo:25,aTo:20 },
+ 19:{ sFrom:25,aFrom:21,sTo:27,aTo:55 },20:{ sFrom:27,aFrom:56,sTo:29,aTo:45 },
+ 21:{ sFrom:29,aFrom:46,sTo:33,aTo:30 },22:{ sFrom:33,aFrom:31,sTo:36,aTo:27 },
+ 23:{ sFrom:36,aFrom:28,sTo:39,aTo:31 },24:{ sFrom:39,aFrom:32,sTo:41,aTo:46 },
+ 25:{ sFrom:41,aFrom:47,sTo:45,aTo:37 },26:{ sFrom:46,aFrom:1,sTo:51,aTo:30 },
+ 27:{ sFrom:51,aFrom:31,sTo:57,aTo:29 },28:{ sFrom:58,aFrom:1,sTo:66,aTo:12 },
+ 29:{ sFrom:67,aFrom:1,sTo:77,aTo:50 },30:{ sFrom:78,aFrom:1,sTo:114,aTo:6 }
+};
+function juzOfAyah(s,a){
+  function gt(x1,y1,x2,y2){ return (x1>x2) || (x1===x2 && y1>y2); }
+  function ge(x1,y1,x2,y2){ return (x1>x2) || (x1===x2 && y1>=y2); }
+  for (var j=1;j<=30;j++){
+    var m=JUZ_META[j];
+    if (ge(s,a,m.sFrom,m.aFrom) && !gt(s,a,m.sTo,m.aTo)) return j;
+  }
+  return 30;
+}
+function parseSA(sa){
+  if(!sa) return null;
+  var parts=String(sa).split(':'); if(parts.length<2) return null;
+  var s=parseInt(parts[0],10), a=parseInt(parts[1],10);
+  if(!isFinite(s)||!isFinite(a)) return null;
+  return {s:s,a:a};
+}
+
+// Atur output jika tidak ada range SA. Pilih '' (kosong) atau '0'
+var MRL_EMPTY_OUTPUT = ''; // ubah ke '0' jika ingin angka 0
+
+function renderSessionHTML(s){
+  if (!s) return MRL_EMPTY_OUTPUT;
+
+  // validasi harus ada "surah:ayat" → "surah:ayat"
+  var reSA = /^\s*\d+\s*:\s*\d+\s*$/;
+  var hasFrom = !!(s.from && reSA.test(String(s.from)));
+  var hasTo   = !!(s.to   && reSA.test(String(s.to)));
+  if (!(hasFrom && hasTo)){
+    // Tidak ada keterangan SA lengkap → kosong/0
+    return MRL_EMPTY_OUTPUT;
+  }
+
+  // === lanjut sama seperti sebelumnya (range + Juz X–Y + Nilai + badge warna) ===
+  var range = (s.from||'') + ' \u2192 ' + (s.to||'');
+
+  // hitung/ambil jFrom-jTo
+  var jFrom = (s.jFrom!=null && s.jFrom!=='') ? Number(s.jFrom) : null;
+  var jTo   = (s.jTo  !=null && s.jTo  !=='') ? Number(s.jTo)   : null;
+  if (jFrom==null || jTo==null){
+    var pf = parseSA(s.from), pt = parseSA(s.to);
+    if (pf) jFrom = juzOfAyah(pf.s, pf.a);
+    if (pt) jTo   = juzOfAyah(pt.s, pt.a);
+  }
+  var juzTxt = '';
+  if (jFrom && jTo) juzTxt = (jFrom===jTo) ? ('Juz ' + jFrom) : ('Juz ' + jFrom + '\u2013' + jTo);
+  else if (jFrom)   juzTxt = 'Juz ' + jFrom;
+
+  // nilai + huruf (fallback huruf dari score)
+  var huruf = (s.pHuruf && String(s.pHuruf).trim()) ? String(s.pHuruf).toUpperCase() : '';
+  if (!huruf && s.score!=null && s.score!==''){ huruf = hurufFromScore(s.score); }
+  var scoreTxt = '';
+  if (s.score!=null && s.score!==''){
+    scoreTxt = 'Nilai ' + Math.floor(Number(s.score)||0) + (huruf ? (' ('+huruf+')') : '');
+  } else if (huruf){
+    scoreTxt = huruf;
+  }
+
+  var parts = [];
+  if (range) parts.push(range);
+  if (juzTxt) parts.push(juzTxt);
+  if (scoreTxt) parts.push(scoreTxt);
+  var inner = parts.join(' \u2022 ');
+
+  var st = predStyle(huruf);
+  if (!st) return inner;
+  return '<div style="display:inline-block;border-radius:8px;padding:6px 8px;border:1px solid '+st.br+';background:'+st.bg+';color:'+st.fg+'">'+ inner +'</div>';
+}
 
   async function openMurRangeListForRow(tr){
     var box = document.getElementById('murRangeListModal');
@@ -9099,8 +9189,8 @@ var btnStyle = btnEnabled
   '<td style="padding:8px 10px;border-bottom:1px solid #eee;vertical-align:top">'+ fmtID(it.tanggal||'') +'</td>' +
   '<td style="padding:8px 10px;border-bottom:1px solid #eee;vertical-align:top"><b>'+ num(it.total).toFixed(2) +' juz</b></td>' +
   '<td style="padding:8px 10px;border-bottom:1px solid #eee;white-space:pre-wrap;vertical-align:top">'+ renderSessionHTML(it.s1) +'</td>' +
-  '<td style="padding:8px 10px;border-bottom:1px solid #eee;white-space:pre-wrap;vertical-align:top">'+ renderSessionHTML(it.s2) +'</td>' +
-  '<td style="padding:8px 10px;border-bottom:1px solid #eee;white-space:pre-wrap;vertical-align:top">'+ renderSessionHTML(it.s3) +'</td>';
+'<td style="padding:8px 10px;border-bottom:1px solid #eee;white-space:pre-wrap;vertical-align:top">'+ renderSessionHTML(it.s2) +'</td>' +
+'<td style="padding:8px 10px;border-bottom:1px solid #eee;white-space:pre-wrap;vertical-align:top">'+ renderSessionHTML(it.s3) +'</td>'
         tb.appendChild(trEl);
       }
     }
@@ -9129,8 +9219,8 @@ var btnStyle = btnEnabled
   '<td style="padding:8px 10px;border-bottom:1px solid #eee;vertical-align:top">'+ fmtID(it2.tanggal||'') +'</td>' +
   '<td style="padding:8px 10px;border-bottom:1px solid #eee;vertical-align:top"><b>'+ num(it2.total).toFixed(2) +' juz</b></td>' +
   '<td style="padding:8px 10px;border-bottom:1px solid #eee;white-space:pre-wrap;vertical-align:top">'+ renderSessionHTML(it2.s1) +'</td>' +
-  '<td style="padding:8px 10px;border-bottom:1px solid #eee;white-space:pre-wrap;vertical-align:top">'+ renderSessionHTML(it2.s2) +'</td>' +
-  '<td style="padding:8px 10px;border-bottom:1px solid #eee;white-space:pre-wrap;vertical-align:top">'+ renderSessionHTML(it2.s3) +'</td>';
+'<td style="padding:8px 10px;border-bottom:1px solid #eee;white-space:pre-wrap;vertical-align:top">'+ renderSessionHTML(it2.s2) +'</td>' +
+'<td style="padding:8px 10px;border-bottom:1px solid #eee;white-space:pre-wrap;vertical-align:top">'+ renderSessionHTML(it2.s3) +'</td>'
         tb.appendChild(trEl2);
       }
     };
@@ -9167,7 +9257,6 @@ var btnStyle = btnEnabled
 // D. MURAJAAH 3 SESI
 // ============================	
 </script>
-
 
 
 <script>
