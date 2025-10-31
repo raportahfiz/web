@@ -4581,6 +4581,9 @@ document.getElementById('mur-save')?.addEventListener('click', function(){ simpa
 
 	 
 // ============================
+// B. DOWNLOAD PDF
+// ============================		 
+// ============================
 // Download PDF/Excel Rekap (slot-based attendance)
 // ============================
 (function(){
@@ -4720,21 +4723,42 @@ function _isMeaningfulKBM(rec){
   return `${fmtD_M_YYYY(startDate)} s.d. ${fmtD_M_YYYY(endDate)}`;
 }
 
+// --- Helper aman ambil nilai kelas ---
+function getSelectedKelas(){
+  const el = (typeof kelasSelect !== 'undefined' && kelasSelect)
+    ? kelasSelect
+    : document.getElementById('kelasSelect');
+
+  if (!el) return { value: '', el: null };
+
+  // nilai sekarang
+  const v = (el.value || '').trim();
+  if (v) return { value: v, el };
+
+  // fallback: pilih opsi pertama yang non-empty (jika ada)
+  const first = [...el.options || []].map(o => (o.value || '').trim()).find(Boolean);
+  if (first) {
+    el.value = first;
+    return { value: first, el };
+  }
+  return { value: '', el };
+}
+
   // === Helper Kelas/Kelompok ===
 function buildKelasKelompokLine(kelas, kelasEl) {
   const kelasNum = (String(kelas||'').match(/(\d+)/)?.[1]) || (kelas || '-');
-  const custom = window.namaKelasCustom || window.NAMA_KELAS_CUSTOM || {  kelas_012025: "Ust. Tukimin",
-  kelas_022025: "Ust. Dicky Miswardi",
+  const custom = window.namaKelasCustom || window.NAMA_KELAS_CUSTOM || {  kelas_012025: "Ust. Tukimin Abu Rasyid BA",
+  kelas_022025: "Ust. Dicky Miswardi BA",
   kelas_032025: "Ust. Jundullah BA",
   kelas_042025: "Ust. Abdullah",
-  kelas_052025: "Ust. Ro'uuf Noor Huda Su'udin",
-  kelas_062025: "Ust. Salahuddin Santoaji P",
+  kelas_052025: "Ust. Ro'uuf Noor Huda Su'udin S.Pd",
+  kelas_062025: "Ust. Salahuddin Santoaji S.T.P",
   kelas_072025: "Ust. Hammam Ahmed Saleh",
   kelas_082025: "Ust. Alif Rafiqul",
-  kelas_092025: "Ust. Ali Wardana",
+  kelas_092025: "Ust. Ali Wardana S.Pd",
   kelas_102025: "Ust. Mullah Muhammad Umar",
-  kelas_112025: "Ust. Akhsani Tawqim",
-  kelas_122025: "Ust. Ikhsan Nur Kamidin",
+  kelas_112025: "Ust. Akhsani Tawqim SE",
+  kelas_122025: "Ust. Ikhsan Nur Khamid",
   kelas_132025: "Ust. Abdul Haq",
   kelas_142025: "Ust. Abdullah Al Guspari",
   kelas_152025: "Ust. Abdullah Rafi",
@@ -4847,8 +4871,14 @@ if (typeof window.drawTableHeader !== 'function') {
   allKelasBtn?.addEventListener('click', pdfAllKelasDownload);
 
   // Saat tanggal berubah, muat ulang opsi santri (opsional)
-  $('#pdf-start-date')?.addEventListener('change', () => { window._populateSantriSelect?.(); });
-  $('#pdf-end-date')?.addEventListener('change', () => { window._populateSantriSelect?.(); });
+  $('#pdf-start-date')?.addEventListener('change', () => {
+  const { value: kelas } = getSelectedKelas();
+  if (kelas) window._populateSantriSelect?.();
+});
+$('#pdf-end-date')?.addEventListener('change', () => {
+  const { value: kelas } = getSelectedKelas();
+  if (kelas) window._populateSantriSelect?.();
+});
 
   // ====== Loader XLSX ======
   async function ensureXLSX(){
@@ -4909,12 +4939,11 @@ async function d1FetchAbsensiAggMap({ kelas, start, end }) {
 
   // ====== Ambil & Agregasi Data (Rekap Kelas) ======
   async function collectRekapData(){
-  const kelasEl = (typeof kelasSelect !== 'undefined' && kelasSelect) ? kelasSelect : document.getElementById('kelasSelect');
-  const kelas = kelasEl?.value || '';
+  const { value: kelas, el: kelasEl } = getSelectedKelas();
   const startDate = document.querySelector('#pdf-start-date')?.value;
   const endDate   = document.querySelector('#pdf-end-date')?.value;
   if (!startDate || !endDate) throw new Error('Mohon pilih tanggal mulai dan tanggal akhir.');
-
+  if (!kelas) throw new Error('Mohon pilih kelas terlebih dahulu.');
   const { line: kelasLine } = buildKelasKelompokLine(kelas, kelasEl);
 
   // 1) ABSENSI: raw (detail harian) + aggregate (ringkas per santri)
@@ -5049,15 +5078,19 @@ const allDataNorm = rawList
 
   // === Isi dropdown santri (modal) ===
   async function populateSantriSelect(){
-    const sel = santriSelect;
-    if (!sel) return;
+  const sel = santriSelect;
+  if (!sel) return;
 
-    const kelasEl = (typeof kelasSelect !== 'undefined' && kelasSelect) ? kelasSelect : document.getElementById('kelasSelect');
-    const kelas = kelasEl?.value || '';
-    const startDate = $('#pdf-start-date')?.value;
-    const endDate   = $('#pdf-end-date')?.value;
+  const { value: kelas, el: kelasEl } = getSelectedKelas();
+  const startDate = $('#pdf-start-date')?.value;
+  const endDate   = $('#pdf-end-date')?.value;
 
-    sel.innerHTML = `<option value="">Memuat…</option>`;
+  if (!kelas) {
+    sel.innerHTML = `<option value="">— Pilih kelas terlebih dahulu —</option>`;
+    return; // << JANGAN fetch apa-apa sebelum kelas ada
+  }
+
+  sel.innerHTML = `<option value="">Memuat…</option>`;
 
     try {
       if (startDate && endDate) {
@@ -5559,6 +5592,8 @@ window.PDF_joinRangeSegmentsCompact = PDF_joinRangeSegmentsCompact;
 
   // ====== Ambil & Agregasi Data utk 1 kelas spesifik ======
   async function collectRekapDataForClass(kelasKey, startDate, endDate){
+  if (!kelasKey) return null;
+  if (!startDate || !endDate) return null;
   const { line: kelasLine } = _kelasKelompokLineFor(kelasKey);
 
   // 1) ABSENSI: raw + aggregate
@@ -6988,9 +7023,8 @@ async function pdfSantriDownload(){
 }
 window._pdfSantriDownload = pdfSantriDownload;
 // ============================
-// B. DOWNLOAD DATA
+// B. DOWNLOAD PDF
 // ============================
-
 
 
 
@@ -8457,7 +8491,7 @@ if (window.currentRowEl){
     else { s=s.replace(/,/g,""); }
     const n = parseFloat(s); return Number.isFinite(n)?n:0;
   };
-  const BATAS = {1: 5, 2: 10, 3: 15, 4: 20, 5: 30};
+  const BATAS = {1: 8, 2: 13, 3: 18, 4: 23, 5: 28, 6: 30};
   const LS_KEY = k => `murRange:${k}`;
 
   function getSantriTable(){
@@ -8504,7 +8538,12 @@ if (window.currentRowEl){
       if (tr.querySelector('.total-mur-range')) return;
       const td = document.createElement('td');
       td.className = 'total-mur-range';
-      td.innerHTML = `0.00&nbsp;juz <span class="mur-range-badge" style="color:#999; font-size:12px">total 0%</span> <small class="mur-range-count" style="color:#6b7280">(0)</small>`;
+      td.innerHTML = '0.00&nbsp;juz ' +
+  '<span class="mur-range-badge" style="color:#999; font-size:12px">total 0%</span> ' +
+  '<small class="mur-range-count" data-link="0" data-count="0" role="button" tabindex="-1" aria-label="Tidak ada input murajaah dalam rentang" style="color:#6b7280">(0)</small> ' +
+  '<button type="button" class="mur-range-list-btn" data-count="0" disabled ' +
+  'style="margin-left:6px;padding:3px 8px;font-size:12px;border:1px solid #d1d5db;border-radius:6px;background:#f9fafb;color:#6b7280;cursor:not-allowed" ' +
+  'title="Daftar input murajaah (rentang)">Lihat</button>';
       const murCell = tr.querySelector('.murajaah-cell');
       if (murCell && murCell.nextSibling) tr.insertBefore(td, murCell.nextSibling);
       else tr.appendChild(td);
@@ -8667,9 +8706,20 @@ if (window.currentRowEl){
         let totalLabel = `${totalNum.toFixed(2)}&nbsp;juz`;
         if (totalNum >= 30) totalLabel = `<span style="color:#7c3aed;font-weight:600">KHATAM</span> (${totalNum.toFixed(2)} juz)`;
 
-        cell.innerHTML = `${totalLabel}
-          <span class="mur-range-badge" style="color:#6b7280; font-size:12px">total ${pSum}%</span>
-          <small class="mur-range-count" style="color:#6b7280">(${rec?.cAll||0})</small>`;
+		var count = Number(rec && rec.cAll ? rec.cAll : 0);
+var btnEnabled = count > 0;
+var btnStyle = btnEnabled
+  ? 'margin-left:6px;padding:3px 8px;font-size:12px;border:1px solid #d1d5db;border-radius:6px;background:#eef2ff;color:#4338ca;cursor:pointer'
+  : 'margin-left:6px;padding:3px 8px;font-size:12px;border:1px solid #d1d5db;border-radius:6px;background:#f9fafb;color:#6b7280;cursor:not-allowed';
+		
+        cell.innerHTML =
+  totalLabel +
+  ' <span class="mur-range-badge" style="color:#6b7280; font-size:12px">total ' + pSum + '%</span> ' +
+  '<small class="mur-range-count" data-link="' + (btnEnabled ? '1' : '0') + '" data-count="' + count + '" role="button" tabindex="' + (btnEnabled ? '0' : '-1') + '" ' +
+  'aria-label="' + (btnEnabled ? ('Lihat ' + count + ' input murajaah dalam rentang') : 'Tidak ada input murajaah dalam rentang') + '" ' +
+  'style="color:#6b7280;' + (btnEnabled ? 'cursor:pointer;text-decoration:underline' : '') + '">(' + count + ')</small> ' +
+  '<button type="button" class="mur-range-list-btn" data-count="' + count + '" ' + (btnEnabled ? '' : 'disabled') + ' ' +
+  'style="' + btnStyle + '" title="Daftar input murajaah (rentang)">Lihat</button>';
 
         cell.dataset.murRangeTotal = totalNum.toFixed(2);
         cell.dataset.murRangePsum  = String(pSum);
@@ -8702,7 +8752,12 @@ if (window.currentRowEl){
     [...rows].forEach(tr=>{
       const td = tr.querySelector('.total-mur-range');
       if (!td) return;
-      td.innerHTML = `0.00&nbsp;juz <span class="mur-range-badge" style="color:#999; font-size:12px">total 0%</span> <small class="mur-range-count" style="color:#6b7280">(0)</small>`;
+      td.innerHTML = '0.00&nbsp;juz ' +
+  '<span class="mur-range-badge" style="color:#999; font-size:12px">total 0%</span> ' +
+  '<small class="mur-range-count" data-link="0" data-count="0" role="button" tabindex="-1" aria-label="Tidak ada input murajaah dalam rentang" style="color:#6b7280">(0)</small> ' +
+  '<button type="button" class="mur-range-list-btn" data-count="0" disabled ' +
+  'style="margin-left:6px;padding:3px 8px;font-size:12px;border:1px solid #d1d5db;border-radius:6px;background:#f9fafb;color:#6b7280;cursor:not-allowed" ' +
+  'title="Daftar input murajaah (rentang)">Lihat</button>';
       td.dataset.murRangeTotal = "0.00";
       td.dataset.murRangePsum  = "0";
       td.dataset.murRangePavg  = "0";
@@ -8889,13 +8944,229 @@ if (window.currentRowEl){
   }
 
   window.hitungTotalMurRangeFromTable = hitungTotalMurRangeFromTable;
+  window.getRangeForKelas = window.getRangeForKelas || getRangeForKelas;
+  window.kelasNow        = window.kelasNow        || kelasNow;
+  window.getSantriTable  = window.getSantriTable  || getSantriTable;
+})();
+</script>
+
+<script>
+(function(){
+  function fmtID(iso){ if(!iso) return ''; var a=String(iso).split('-'); return a.length===3? (a[2]+'/'+a[1]+'/'+a[0]) : iso; }
+  function num(v){ var n=parseFloat(String(v==null?'':v).replace(/[^0-9.,-]/g,'').replace(',', '.')); return isFinite(n)?n:0; }
+
+  function _kelasNow(){
+    if (window.kelasNow) return window.kelasNow();
+    var sel = document.querySelector('select#kelasSelect, select[name="kelas"], #kelas, .kelas, .kelas-select, .kelasSelect');
+    if (sel && sel.value) return String(sel.value).trim();
+    var ref = document.querySelector('[data-kelas]');
+    if (ref && ref.dataset && ref.dataset.kelas) return String(ref.dataset.kelas).trim();
+    try{ var last=localStorage.getItem('lastKelas'); if (last) return String(last).trim(); }catch(e){}
+    return '';
+  }
+  function _getSantriTable(){
+    if (window.getSantriTable) return window.getSantriTable();
+    return document.getElementById('santri-table')
+        || document.getElementById('santriTable')
+        || document.querySelector('table[data-role="santri-table"]')
+        || document.querySelector('table.santri-table')
+        || null;
+  }
+  async function _getRangeForKelas(kelas){
+    if (window.getRangeForKelas){
+      try{ var r = await window.getRangeForKelas(kelas); if (r && (r.fromDate || r.toDate)) return r; }catch(e){}
+    }
+    var dariEl = document.getElementById('murRangeDari');
+    var smpEl  = document.getElementById('murRangeSampai');
+    return { fromDate: (dariEl && dariEl.value ? dariEl.value : ''), toDate: (smpEl && smpEl.value ? smpEl.value : '') };
+  }
+
+  // Peta warna untuk predikat huruf
+  function predStyle(p){
+    var t = (p==null?'':String(p)).toUpperCase().trim();
+    if (t === 'A+') return { bg:'#dcfce7', fg:'#166534', br:'#86efac' }; // green-100
+    if (t === 'A')  return { bg:'#eafaf0', fg:'#166534', br:'#a7f3d0' }; // slightly paler green
+    if (t === 'B')  return { bg:'#dbeafe', fg:'#1e3a8a', br:'#93c5fd' }; // blue-100
+    if (t === 'C')  return { bg:'#ffedd5', fg:'#9a3412', br:'#fdba74' }; // orange-100
+    if (t === 'D')  return { bg:'#ffe4e6', fg:'#9f1239', br:'#fecdd3' }; // rose-100
+    return null;
+  }
+
+  // Bungkus konten sesi dengan badge warna (jika ada pHuruf)
+  function renderSessionHTML(s){
+    // gunakan sesLine(s) yang sudah ada untuk teksnya
+    var inner = sesLine(s);
+    var st = s ? predStyle(s.pHuruf) : null;
+    if (!st) return inner || '-';
+    return '<div style="display:inline-block;border-radius:8px;padding:6px 8px;border:1px solid '+st.br+';background:'+st.bg+';color:'+st.fg+'">'+ inner +'</div>';
+  }
+
+  function sesLine(s){
+    if (!s) return '-';
+    var hasRange = (s.from && s.from.length) || (s.to && s.to.length);
+    var range = hasRange ? ((s.from||'') + ' \u2192 ' + (s.to||'')) : (s.pages||'');
+    var juz   = (s.juz!=null && s.juz!=='') ? (' \u2022 ' + num(s.juz).toFixed(2) + ' juz') : '';
+    var score = (s.score!=null && s.score!=='') ? (' \u2022 Nilai ' + Math.floor(Number(s.score)||0)) : '';
+    var huruf = (s.pHuruf ? (' ('+s.pHuruf+')') : '');
+    var txt = '';
+    if (range && range.length) txt += range;
+    if (juz) txt += juz;
+    if (score) txt += score;
+    if (huruf) txt += huruf;
+    return txt || '-';
+  }
+
+  function extractSessions(rec){
+    function s(i){
+      return {
+        from:  (rec['murFrom'+i]  != null ? rec['murFrom'+i]  : (rec.murSessions && rec.murSessions[i-1] ? rec.murSessions[i-1].from  : (i===1?rec.murFrom:undefined))) || '',
+        to:    (rec['murTo'+i]    != null ? rec['murTo'+i]    : (rec.murSessions && rec.murSessions[i-1] ? rec.murSessions[i-1].to    : (i===1?rec.murTo:undefined)))   || '',
+        pages: (rec['murPages'+i] != null ? rec['murPages'+i] : (rec.murSessions && rec.murSessions[i-1] ? rec.murSessions[i-1].pages : (i===1?rec.murPages:undefined)))|| '',
+        juz:   (rec['juzmur'+i]   != null ? rec['juzmur'+i]   : (rec['juzSesi'+i] != null ? rec['juzSesi'+i] : (rec.murSessions && rec.murSessions[i-1] ? rec.murSessions[i-1].juz : undefined))),
+        score: (rec['murScore'+i] != null ? rec['murScore'+i] : (rec.murSessions && rec.murSessions[i-1] ? rec.murSessions[i-1].score : undefined)),
+        pHuruf:(rec['murPredHuruf'+i] != null ? rec['murPredHuruf'+i] : (rec.murSessions && rec.murSessions[i-1] ? rec.murSessions[i-1].predikatHuruf : ''))
+      };
+    }
+    var s1=s(1), s2=s(2), s3=s(3);
+    var total = num(rec.juzmurajaah!=null ? rec.juzmurajaah : (rec.totalJuz!=null ? rec.totalJuz : (num(s1.juz)+num(s2.juz)+num(s3.juz))));
+    return { s1:s1, s2:s2, s3:s3, total: total };
+  }
+
+  async function openMurRangeListForRow(tr){
+    var box = document.getElementById('murRangeListModal');
+    if (!box){ alert('Modal murRangeListModal belum ditambahkan (Langkah 1).'); return; }
+
+    var kelas = _kelasNow();
+    if (!kelas){ alert('Mohon pilih kelas.'); return; }
+
+    var rng = await _getRangeForKelas(kelas);
+    var fromDate = rng && rng.fromDate ? rng.fromDate : '';
+    var toDate   = rng && rng.toDate   ? rng.toDate   : '';
+    if (!fromDate || !toDate){ alert('Rentang tanggal belum disetel. Klik header "Setting Murajaah" untuk mengatur.'); return; }
+
+    var res = await fetch('/api/getAbsensiRange?kelas=' + encodeURIComponent(kelas) + '&start=' + encodeURIComponent(fromDate) + '&end=' + encodeURIComponent(toDate) + '&t=' + Date.now());
+    if (!res.ok){ alert('Gagal mengambil data rentang.'); return; }
+    var payload = await res.json();
+    var all = Array.isArray(payload) ? payload : (payload && payload.list ? payload.list : []);
+
+    var namaRow = tr && tr.children && tr.children[1] ? (tr.children[1].childNodes && tr.children[1].childNodes[0] ? tr.children[1].childNodes[0].textContent : tr.children[1].textContent) : '';
+    namaRow = (namaRow || '').trim();
+    var nisRow  = tr && tr.dataset && tr.dataset.nis ? String(tr.dataset.nis).trim() : '';
+    var keyRow  = tr && tr.dataset ? (String(tr.dataset.key || tr.dataset.nis || tr.dataset.id || '').trim().toLowerCase()) : '';
+
+    var table = _getSantriTable();
+    var rows  = table && table.tBodies && table.tBodies[0] ? Array.prototype.slice.call(table.tBodies[0].rows) : [];
+    var nameToKey = new Map();
+    for (var r=0;r<rows.length;r++){
+      var rr = rows[r];
+      var k = rr && rr.dataset ? String(rr.dataset.nis || rr.dataset.id || rr.dataset.key || '').trim().toLowerCase() : '';
+      var nm= rr && rr.children && rr.children[1] ? (rr.children[1].childNodes && rr.children[1].childNodes[0] ? rr.children[1].childNodes[0].textContent : rr.children[1].textContent) : '';
+      nm = (nm || '').trim().toLowerCase();
+      if (k && nm) nameToKey.set(nm, k);
+    }
+    var myKey = keyRow || nameToKey.get(namaRow.toLowerCase()) || '';
+
+    var mine = all.filter(function(rec){
+      var rkey = String((rec && (rec.nis!=null ? rec.nis : rec.id)) || '').trim().toLowerCase();
+      if (myKey && rkey) return rkey === myKey;
+      var rnm = String(rec && rec.nama ? rec.nama : '').trim().toLowerCase();
+      return (namaRow && rnm && rnm === namaRow.toLowerCase());
+    });
+
+    var normalized = mine.map(function(rec){
+      var ss = extractSessions(rec);
+      return { tanggal: (rec && (rec.tanggal || rec.date) ? (rec.tanggal || rec.date) : ''), total:ss.total, s1:ss.s1, s2:ss.s2, s3:ss.s3 };
+    }).sort(function(a,b){ return String(a.tanggal||'').localeCompare(String(b.tanggal||'')); });
+
+    document.getElementById('mrl-title').textContent = 'Daftar Murajaah (Rentang)';
+    document.getElementById('mrl-sub').textContent =
+      (namaRow ? ('Nama: ' + namaRow + ' • ') : '') +
+      (nisRow ? ('NIS: ' + nisRow + ' • ') : '') +
+      ('Rentang: ' + fmtID(fromDate) + ' s.d. ' + fmtID(toDate) + ' • Total hari: ' + normalized.length);
+
+    var tb = document.getElementById('mrl-tbody');
+    var empty = document.getElementById('mrl-empty');
+    tb.innerHTML = '';
+    if (!normalized.length){
+      empty.style.display='block';
+    } else {
+      empty.style.display='none';
+      for (var i=0;i<normalized.length;i++){
+        var it = normalized[i];
+        var trEl = document.createElement('tr');
+        if (i%2===1) trEl.style.background = '#fafafa';
+        trEl.innerHTML =
+  '<td style="padding:8px 10px;border-bottom:1px solid #eee;vertical-align:top">'+ fmtID(it.tanggal||'') +'</td>' +
+  '<td style="padding:8px 10px;border-bottom:1px solid #eee;vertical-align:top"><b>'+ num(it.total).toFixed(2) +' juz</b></td>' +
+  '<td style="padding:8px 10px;border-bottom:1px solid #eee;white-space:pre-wrap;vertical-align:top">'+ renderSessionHTML(it.s1) +'</td>' +
+  '<td style="padding:8px 10px;border-bottom:1px solid #eee;white-space:pre-wrap;vertical-align:top">'+ renderSessionHTML(it.s2) +'</td>' +
+  '<td style="padding:8px 10px;border-bottom:1px solid #eee;white-space:pre-wrap;vertical-align:top">'+ renderSessionHTML(it.s3) +'</td>';
+        tb.appendChild(trEl);
+      }
+    }
+
+    var search = document.getElementById('mrl-search');
+    search.value = '';
+    search.oninput = function(){
+      var q = (search.value || '').trim().toLowerCase();
+      var filtered = normalized.filter(function(it){
+        var hay = [
+          it.tanggal, it.total,
+          it.s1 && it.s1.from, it.s1 && it.s1.to, it.s1 && it.s1.pages, it.s1 && it.s1.score, it.s1 && it.s1.pHuruf,
+          it.s2 && it.s2.from, it.s2 && it.s2.to, it.s2 && it.s2.pages, it.s2 && it.s2.score, it.s2 && it.s2.pHuruf,
+          it.s3 && it.s3.from, it.s3 && it.s3.to, it.s3 && it.s3.pages, it.s3 && it.s3.score, it.s3 && it.s3.pHuruf
+        ].join(' ').toLowerCase();
+        return hay.indexOf(q) !== -1;
+      });
+      tb.innerHTML='';
+      if (!filtered.length){ empty.style.display='block'; return; }
+      empty.style.display='none';
+      for (var j=0;j<filtered.length;j++){
+        var it2 = filtered[j];
+        var trEl2 = document.createElement('tr');
+        if (j%2===1) trEl2.style.background = '#fafafa';
+        trEl2.innerHTML =
+  '<td style="padding:8px 10px;border-bottom:1px solid #eee;vertical-align:top">'+ fmtID(it2.tanggal||'') +'</td>' +
+  '<td style="padding:8px 10px;border-bottom:1px solid #eee;vertical-align:top"><b>'+ num(it2.total).toFixed(2) +' juz</b></td>' +
+  '<td style="padding:8px 10px;border-bottom:1px solid #eee;white-space:pre-wrap;vertical-align:top">'+ renderSessionHTML(it2.s1) +'</td>' +
+  '<td style="padding:8px 10px;border-bottom:1px solid #eee;white-space:pre-wrap;vertical-align:top">'+ renderSessionHTML(it2.s2) +'</td>' +
+  '<td style="padding:8px 10px;border-bottom:1px solid #eee;white-space:pre-wrap;vertical-align:top">'+ renderSessionHTML(it2.s3) +'</td>';
+        tb.appendChild(trEl2);
+      }
+    };
+
+    box.style.display = 'flex';
+  }
+
+  // Klik tombol "Lihat"
+  document.addEventListener('click', function(ev){
+    var btn = ev.target && ev.target.closest ? ev.target.closest('.mur-range-list-btn') : null;
+    if (!btn) return;
+    if (btn.hasAttribute('disabled')) return;
+    var tr = btn.closest('tr'); if (!tr) return;
+    openMurRangeListForRow(tr);
+  });
+
+  // Tutup modal
+  document.addEventListener('click', function(e){
+    var box = document.getElementById('murRangeListModal');
+    if (!box) return;
+    if (e.target && typeof e.target.hasAttribute === 'function' && e.target.hasAttribute('data-close-mur-range-list')){
+      box.style.display = 'none';
+    }
+  });
+  document.addEventListener('keydown', function(e){
+    var box = document.getElementById('murRangeListModal');
+    if (box && e.key === 'Escape' && box.style.display !== 'none'){
+      box.style.display = 'none';
+    }
+  });
 })();
 
 // ============================
 // D. MURAJAAH 3 SESI
 // ============================	
 </script>
-
 
 
 
@@ -11548,5 +11819,44 @@ document.addEventListener("DOMContentLoaded", () => {
 })();
 </script>		
 
+
+
+<!-- Modal: Daftar Input Murajaah (Rentang) -->
+<div id="murRangeListModal" style="display:none;position:fixed;inset:0;z-index:9999;align-items:center;justify-content:center">
+  <div data-close-mur-range-list style="position:absolute;inset:0;background:rgba(0,0,0,.5)"></div>
+  <div style="position:relative;background:#fff;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.2);width:min(100%,1000px);max-height:80vh;display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid #eee">
+      <div>
+        <div id="mrl-title" style="font-weight:700">Daftar Murajaah (Rentang)</div>
+        <div id="mrl-sub" style="font-size:12px;color:#6b7280"></div>
+      </div>
+      <button data-close-mur-range-list style="border:1px solid #e5e7eb;border-radius:8px;padding:6px 10px;font-size:12px">Tutup</button>
+    </div>
+    <div style="padding:10px 16px">
+  <input
+    id="mrl-search"
+    placeholder="Cari tanggal/surah/catatan…"
+    style="box-sizing:border-box; width:100%; max-width:100%; display:block; border:1px solid #e5e7eb; border-radius:8px; padding:8px 10px; font-size:14px"
+  >
+</div>
+    <div style="padding:0 16px 12px;overflow:auto">
+      <table style="width:100%;border-collapse:separate;border-spacing:0;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden">
+        <thead style="background:#fafafa">
+          <tr>
+            <th style="text-align:left;padding:8px 10px;border-bottom:1px solid #eee">Tanggal</th>
+            <th style="text-align:left;padding:8px 10px;border-bottom:1px solid #eee">Total</th>
+            <th style="text-align:left;padding:8px 10px;border-bottom:1px solid #eee">Sesi 1</th>
+            <th style="text-align:left;padding:8px 10px;border-bottom:1px solid #eee">Sesi 2</th>
+            <th style="text-align:left;padding:8px 10px;border-bottom:1px solid #eee">Sesi 3</th>
+          </tr>
+        </thead>
+        <tbody id="mrl-tbody"></tbody>
+      </table>
+      <div id="mrl-empty" style="text-align:center;color:#6b7280;font-size:13px;padding:16px;display:none">
+        Belum ada input murajaah pada rentang ini.
+      </div>
+    </div>
+  </div>
+</div>		
 </body>
 </html>
