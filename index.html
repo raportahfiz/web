@@ -1387,24 +1387,24 @@ async function buatUserNIS() {
         <input type="date" id="pdf-end-date" />
       </div>
 
-	  <!-- Toggle Rentang Absensi (opsional) -->
-<div class="date-item" style="align-items:center;">
-  <label for="use-absensi-range" style="display:inline-flex; gap:.35rem; align-items:center; font-weight:600;">
-    <input type="checkbox" id="use-absensi-range" />
-    Rentang Absensi (opsional)
-  </label>
-</div>
-<div></div>
+      <!-- Toggle Rentang Absensi (opsional) -->
+      <div class="date-item" style="align-items:center;">
+        <label for="use-absensi-range" style="display:inline-flex; gap:.35rem; align-items:center; font-weight:600;">
+          <input type="checkbox" id="use-absensi-range" />
+          Rentang Absensi (opsional)
+        </label>
+      </div>
+      <div></div>
 
-<!-- Absensi Mulai / s.d (muncul jika toggle aktif) -->
-<div class="date-item absensi-range" style="display:none;">
-  <label for="absensi-start-date">Mulai</label>
-  <input type="date" id="absensi-start-date" disabled />
-</div>
-<div class="date-item absensi-range" style="display:none;">
-  <label for="absensi-end-date">s/d</label>
-  <input type="date" id="absensi-end-date" disabled />
-</div>
+      <!-- Absensi Mulai / s.d (muncul jika toggle aktif) -->
+      <div class="date-item absensi-range" style="display:none;">
+        <label for="absensi-start-date">Mulai</label>
+        <input type="date" id="absensi-start-date" disabled />
+      </div>
+      <div class="date-item absensi-range" style="display:none;">
+        <label for="absensi-end-date">s/d</label>
+        <input type="date" id="absensi-end-date" disabled />
+      </div>
 
       <!-- Row 2, Col 1: PDF Halaqoh -->
       <button id="download-pdf-rekap" class="rekap-btn">PDF Halaqoh</button>
@@ -1428,11 +1428,9 @@ async function buatUserNIS() {
 
 <!-- CSS khusus modal ini saja -->
 <style>
-
-#pdfModalOverlay .absensi-range input[type="date"]{
-  width:12ch; min-width:10ch;
-}
-	
+  #pdfModalOverlay .absensi-range input[type="date"]{
+    width:12ch; min-width:10ch;
+  }
   /* Grid 2 kolom untuk 6 item (3 baris) */
   #pdfModalOverlay .pdf-rekap-controls{
     display:grid;
@@ -1441,7 +1439,6 @@ async function buatUserNIS() {
     align-items:center;
     margin-top:.5rem;
   }
-
   /* Label nempel ke input & kompak */
   #pdfModalOverlay .date-item{
     display:inline-flex; align-items:center; gap:.2rem; white-space:nowrap;
@@ -1449,13 +1446,11 @@ async function buatUserNIS() {
   #pdfModalOverlay .date-item input[type="date"]{
     width:12ch; min-width:10ch;
   }
-
   /* Tombol melebar mengikuti kolom agar sejajar rapi */
   #pdfModalOverlay .rekap-btn{
     width:100%;
   }
 </style>
-
 
 <!-- Modal Kedua: Pilih Santri (muncul saat klik "PDF per Santri") -->
 <div id="santriModalOverlay" style="
@@ -1486,7 +1481,6 @@ async function buatUserNIS() {
 </div>
 <button class="logout-btn" id="logout-btn">Keluar</button>
 </div>
-
 
 <script>
   // -------- Modal Utama --------
@@ -1538,53 +1532,105 @@ async function buatUserNIS() {
   });
 
 
-// === Toggle UI "Rentang Absensi" ===
-(function initAbsensiRangeUI(){
-  const chk = document.getElementById('use-absensi-range');
-  const sEl = document.getElementById('absensi-start-date');
-  const eEl = document.getElementById('absensi-end-date');
-  const group = document.querySelectorAll('.absensi-range');
+  // === Toggle UI "Rentang Absensi" + PERSISTENCE TERPISAH ===
+  (function initAbsensiRangeUI(){
+    const chk   = document.getElementById('use-absensi-range');
+    const sEl   = document.getElementById('absensi-start-date');
+    const eEl   = document.getElementById('absensi-end-date');
+    const group = document.querySelectorAll('.absensi-range');
+    const kelasEl = document.getElementById('kelasSelect');
 
-  function syncUI(){
-    const on = !!chk?.checked;
-    group.forEach(el => el.style.display = on ? '' : 'none');
-    if (sEl) sEl.disabled = !on;
-    if (eEl) eEl.disabled = !on;
-    // auto isi dari tanggal global jika kosong
-    if (on) {
-      if (sEl && !sEl.value) sEl.value = document.getElementById('pdf-start-date')?.value || '';
-      if (eEl && !eEl.value) eEl.value = document.getElementById('pdf-end-date')?.value   || '';
+    if (!sEl || !eEl) return;
+
+    // kunci storage khusus absensi (per kelas)
+    const keyFor = () => `raportahfiz.absensiRange.${kelasEl?.value || 'ALL'}`;
+    const isISO = v => /^\d{4}-\d{2}-\d{2}$/.test(v);
+
+    // flag untuk mencegah auto-copy setelah hydrate
+    let hydrated = false;
+
+    function save(){
+      localStorage.setItem(keyFor(), JSON.stringify({
+        enabled: !!(chk?.checked),
+        start:   sEl.value || null,
+        end:     eEl.value || null,
+        t: Date.now()
+      }));
     }
+
+    function syncUI(){
+      const on = !!chk?.checked;
+      group.forEach(el => el.style.display = on ? '' : 'none');
+      sEl.disabled = !on;
+      eEl.disabled = !on;
+
+      // auto-copy dari Periode HANYA bila:
+      // - toggle ON
+      // - belum pernah hydrate dari storage
+      // - kedua field masih kosong
+      if (on && !hydrated && !sEl.value && !eEl.value){
+        const gs = document.getElementById('pdf-start-date')?.value || '';
+        const ge = document.getElementById('pdf-end-date')?.value   || '';
+        if (isISO(gs)) sEl.value = gs;
+        if (isISO(ge)) eEl.value = ge;
+      }
+    }
+
+    function load(){
+      let obj = {};
+      try { obj = JSON.parse(localStorage.getItem(keyFor()) || '{}'); } catch(_){}
+      if (typeof obj.enabled === 'boolean' && chk) chk.checked = obj.enabled;
+      if (isISO(obj.start)) sEl.value = obj.start;
+      if (isISO(obj.end))   eEl.value = obj.end;
+      hydrated = true;
+      syncUI();
+    }
+
+    chk?.addEventListener('change', () => { syncUI(); save(); });
+    sEl.addEventListener('change', save);
+    eEl.addEventListener('change', save);
+
+    // ganti kelas → kunci berubah
+    kelasEl?.addEventListener('change', () => { hydrated = false; load(); });
+
+    if (document.readyState === 'loading'){
+      document.addEventListener('DOMContentLoaded', load);
+    } else {
+      load();
+    }
+
+    // debug helper
+    window.clearSavedAbsensiRange = function(){
+      localStorage.removeItem(keyFor());
+      hydrated = false;
+      load();
+    };
+  })();
+
+  // === Ambil range ABSENSI kalau toggle aktif; kalau tidak, pakai global ===
+  function getAbsensiRangeOrDefault(){
+    const use = document.getElementById('use-absensi-range')?.checked;
+    const as  = document.getElementById('absensi-start-date')?.value || '';
+    const ae  = document.getElementById('absensi-end-date')?.value   || '';
+    if (use && as && ae) return { start: as, end: ae, source: 'absensi' };
+    const gs  = document.getElementById('pdf-start-date')?.value || '';
+    const ge  = document.getElementById('pdf-end-date')?.value   || '';
+    return { start: gs, end: ge, source: 'global' };
   }
-  chk?.addEventListener('change', syncUI);
-  syncUI();
-})();
+  window.getAbsensiRangeOrDefault = getAbsensiRangeOrDefault;
 
-// === Ambil range ABSENSI kalau toggle aktif; kalau tidak, pakai global ===
-function getAbsensiRangeOrDefault(){
-  const use = document.getElementById('use-absensi-range')?.checked;
-  const as  = document.getElementById('absensi-start-date')?.value || '';
-  const ae  = document.getElementById('absensi-end-date')?.value   || '';
-  if (use && as && ae) return { start: as, end: ae, source: 'absensi' };
-  const gs  = document.getElementById('pdf-start-date')?.value || '';
-  const ge  = document.getElementById('pdf-end-date')?.value   || '';
-  return { start: gs, end: ge, source: 'global' };
-}
-window.getAbsensiRangeOrDefault = getAbsensiRangeOrDefault;
-
-// === Buat label "Range Absensi" utk ditaruh di kolom tabel ===
-function buildRangeLabel(startISO, endISO){
-  const { start, end, source } = getAbsensiRangeOrDefault();
-  const fmt = iso => {
-    const m = String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);
-    return m ? `${Number(m[3])}-${Number(m[2])}-${m[1]}` : (iso || '-');
-  };
-  if (source === 'absensi') return `${fmt(start)} s.d. ${fmt(end)}`;
-  return `${fmt(startISO)} s.d. ${fmt(endISO)}`;
-}
-window.buildRangeLabel = buildRangeLabel;	
+  // === Buat label "Range Absensi" utk header (dipakai PDF) ===
+  function buildRangeLabel(startISO, endISO){
+    const { start, end, source } = getAbsensiRangeOrDefault();
+    const fmt = iso => {
+      const m = String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      return m ? `${Number(m[3])}-${Number(m[2])}-${m[1]}` : (iso || '-');
+    };
+    if (source === 'absensi') return `${fmt(start)} s.d. ${fmt(end)}`;
+    return `${fmt(startISO)} s.d. ${fmt(endISO)}`;
+  }
+  window.buildRangeLabel = buildRangeLabel;
 </script>
-
 
 
 	<!-- Modal Pindah Kelas -->
@@ -4718,11 +4764,6 @@ function _isMeaningfulKBM(rec){
     return map;
   }
 
-  function buildRangeLabel(startDate, endDate){
-  // pakai formatter yang sudah ada
-  return `${fmtD_M_YYYY(startDate)} s.d. ${fmtD_M_YYYY(endDate)}`;
-}
-
 // --- Helper aman ambil nilai kelas ---
 function getSelectedKelas(){
   const el = (typeof kelasSelect !== 'undefined' && kelasSelect)
@@ -5315,7 +5356,7 @@ window.PDF_joinRangeSegmentsCompact = PDF_joinRangeSegmentsCompact;
         doc.text('Rekap Absensi & Setoran', margin.left, margin.top);
         doc.setFont('helvetica','normal'); doc.setFontSize(10);
         doc.text(kelasLine, margin.left, margin.top + 6);
-        doc.text(`Periode: ${fmtD_M_YYYY(startDate)} s.d. ${fmtD_M_YYYY(endDate)}`, margin.left, margin.top + 12);
+        doc.text(`Periode Tahfiz: ${fmtD_M_YYYY(startDate)} s.d. ${fmtD_M_YYYY(endDate)}`, margin.left, margin.top + 12);
         const rightX = pageW - margin.right - 70;
         doc.text(`KBM: ${kbmDays} hari (${buildRangeLabel(startDate, endDate)})`, rightX, margin.top + 6);
         doc.text(`Total Santri: ${rows.length}`, rightX, margin.top + 12);
@@ -5776,7 +5817,7 @@ const slotAgg = _aggregateSlotsPerKey(allDataAbsensi);
         doc.setFont('helvetica','bold'); doc.setFontSize(14);
         doc.text('Rekap Absensi & Setoran', margin.left, margin.top);
         doc.setFont('helvetica','normal'); doc.setFontSize(9.5);
-        doc.text(`Periode: ${fmtD_M_YYYY(startDate)} s.d. ${fmtD_M_YYYY(endDate)}`, margin.left, margin.top + 6);
+        doc.text(`Periode Tahfiz: ${fmtD_M_YYYY(startDate)} s.d. ${fmtD_M_YYYY(endDate)}`, margin.left, margin.top + 6);
         doc.setTextColor(...theme.text);
       }
       function drawFooter(pageNo, totalPages, printedAt){
@@ -6052,7 +6093,7 @@ async function xlsRekapDownload(){
 
       // ---- 1) Judul kelas (merge A..last) + keterangan ringkas
       const judul =
-        `Kelas/Kelompok: ${kkLabel}   |   Total Santri: ${rows.length}   |   KBM: ${kbmDays} hari (${buildRangeLabel(startDate, endDate)})   |   Periode: ${fmtD_M_YYYY(startDate)} s.d. ${fmtD_M_YYYY(endDate)}`;
+        `Kelas/Kelompok: ${kkLabel}   |   Total Santri: ${rows.length}   |   KBM: ${kbmDays} hari (${buildRangeLabel(startDate, endDate)})   |   Periode Tahfiz: ${fmtD_M_YYYY(startDate)} s.d. ${fmtD_M_YYYY(endDate)}`;
       const judulRow = [judul, ...Array(baseHeader.length - 1).fill("")];
       rowsAll.push(judulRow);
 
@@ -6835,7 +6876,7 @@ async function pdfSantriDownload(){
       doc.text(`Santri: ${key} — ${namaSantri}`, margin.left, margin.top + 12);
       const rightX = pageW - margin.right - 78;
       doc.text(`Semester: ${tableRows.find(r=>!r._isRekap)?.sem ?? '-'}`, rightX, margin.top + 6);
-      doc.text(`Periode: ${fmtD_M_YYYY(startDate)} s.d. ${fmtD_M_YYYY(endDate)}`, rightX, margin.top + 12);
+      doc.text(`Periode Tahfiz: ${fmtD_M_YYYY(startDate)} s.d. ${fmtD_M_YYYY(endDate)}`, rightX, margin.top + 12);
       doc.setTextColor(...theme.text);
     }
     function drawFooterS(pageNo, totalPages, printedAt){
@@ -7613,6 +7654,8 @@ function juzOfAyah(s,a){
 
   function setPredikatUI(idx){
   const inp = $(`#mur${idx}-score`);
+  applyPredikatBadgeStyle(idx, ''); // netral
+  applyPredikatBadgeStyle(idx, ''); // netral (0 tidak punya predikat)
   if (!inp) return;
   const raw = String(inp.value ?? '');
 
@@ -7655,6 +7698,7 @@ function juzOfAyah(s,a){
   // > 0 → pakai predikat normal (ROSIB 1–59, dst.)
   const p = getPredikat(sc);
   $(`#mur${idx}-predikatBadge`).textContent = `${p.text} (${p.huruf})`;
+  applyPredikatBadgeStyle(idx, p.huruf);
   murState[idx].score  = sc;
   murState[idx].pText  = p.text;
   murState[idx].pHuruf = p.huruf;
@@ -7918,6 +7962,68 @@ function juzOfAyah(s,a){
     renderSession(idx);
   }
 
+	// --- Helper: set header Nama / NIS di murModal ---
+function setMurHeader(nama, nis){
+  const namaEl = document.getElementById('murNama');
+  const nisEl  = document.getElementById('murNis');
+  if (namaEl) namaEl.textContent = nama || '(Nama tidak ditemukan)';
+  if (nisEl)  nisEl.textContent  = nis ? ' • NIS ' + nis : '';
+
+  // simpan ke dataset & hidden input (jika ada)
+  const modal = document.getElementById('murModal');
+  if (modal){
+    modal.dataset.nama = nama || '';
+    modal.dataset.nis  = nis  || '';
+    const inNama = modal.querySelector('input[name="mur_nama"]');
+    const inNis  = modal.querySelector('input[name="mur_nis"]');
+    if (inNama) inNama.value = nama || '';
+    if (inNis)  inNis.value  = nis  || '';
+  }
+}
+
+function getRowNamaNis(row){
+  if (!row) return { nama:'', nis:'' };
+  const nis = String(row.dataset?.nis || '').trim();
+  // kolom [1] biasanya nama (innerText atau node text pertama)
+  const nama = ((row.children?.[1]?.childNodes?.[0]?.textContent) ||
+                (row.children?.[1]?.textContent) || '').trim();
+  return { nama, nis };
+}
+
+	function applyPredikatBadgeStyle(idx, huruf){
+  const el = document.getElementById(`mur${idx}-predikatBadge`);
+  if (!el) return;
+
+  // reset dulu
+  el.style.background = '';
+  el.style.color = '';
+  el.style.border = '';
+  el.style.borderRadius = '8px';
+  el.style.padding = '2px 6px';
+  el.style.display = 'inline-block';
+
+  const h = (huruf||'').toUpperCase().trim();
+  // mapping warna
+  const MAP = {
+    'A+': { bg:'#dcfce7', fg:'#166534', br:'#86efac' }, // hijau muda
+    'A' : { bg:'#eafaf0', fg:'#166534', br:'#a7f3d0' }, // hijau muda (lebih pucat)
+    'B' : { bg:'#dbeafe', fg:'#1e3a8a', br:'#93c5fd' }, // biru muda
+    'C' : { bg:'#ffedd5', fg:'#9a3412', br:'#fdba74' }, // oranye muda
+    'D' : { bg:'#ffe4e6', fg:'#9f1239', br:'#fecdd3' }, // merah muda
+  };
+
+  const s = MAP[h];
+  if (!s){ // tidak ada predikat → netral
+    el.style.background = '';
+    el.style.color = '';
+    el.style.border = '1px solid transparent';
+    return;
+  }
+  el.style.background = s.bg;
+  el.style.color = s.fg;
+  el.style.border = `1px solid ${s.br}`;
+}
+
   // ---------- Helper: resolve kelas & tanggal ----------
   function resolveKelas(){
     const byWin = (window.kelasSelect && window.kelasSelect.value) ? window.kelasSelect.value : "";
@@ -7954,6 +8060,12 @@ function juzOfAyah(s,a){
   async function openModalForRow(row){
     currentRowEl = row;
     $('#murModal').style.display = 'flex';
+
+	  // Isi header Nama/NIS segera saat modal dibuka
+try{
+  const { nama, nis } = getRowNamaNis(row);
+  setMurHeader(nama, nis);
+}catch(_){}
 
     if (!dataReady){
       await ensureMap();
@@ -8543,7 +8655,7 @@ if (window.currentRowEl){
   '<small class="mur-range-count" data-link="0" data-count="0" role="button" tabindex="-1" aria-label="Tidak ada input murajaah dalam rentang" style="color:#6b7280">(0)</small> ' +
   '<button type="button" class="mur-range-list-btn" data-count="0" disabled ' +
   'style="margin-left:6px;padding:3px 8px;font-size:12px;border:1px solid #d1d5db;border-radius:6px;background:#f9fafb;color:#6b7280;cursor:not-allowed" ' +
-  'title="Daftar input murajaah (rentang)">Lihat</button>';
+  'title="Daftar input murajaah (rentang)">Unduh</button>';
       const murCell = tr.querySelector('.murajaah-cell');
       if (murCell && murCell.nextSibling) tr.insertBefore(td, murCell.nextSibling);
       else tr.appendChild(td);
@@ -8719,7 +8831,7 @@ var btnStyle = btnEnabled
   'aria-label="' + (btnEnabled ? ('Lihat ' + count + ' input murajaah dalam rentang') : 'Tidak ada input murajaah dalam rentang') + '" ' +
   'style="color:#6b7280;' + (btnEnabled ? 'cursor:pointer;text-decoration:underline' : '') + '">(' + count + ')</small> ' +
   '<button type="button" class="mur-range-list-btn" data-count="' + count + '" ' + (btnEnabled ? '' : 'disabled') + ' ' +
-  'style="' + btnStyle + '" title="Daftar input murajaah (rentang)">Lihat</button>';
+  'style="' + btnStyle + '" title="Daftar input murajaah (rentang)">Unduh</button>';
 
         cell.dataset.murRangeTotal = totalNum.toFixed(2);
         cell.dataset.murRangePsum  = String(pSum);
@@ -8757,7 +8869,7 @@ var btnStyle = btnEnabled
   '<small class="mur-range-count" data-link="0" data-count="0" role="button" tabindex="-1" aria-label="Tidak ada input murajaah dalam rentang" style="color:#6b7280">(0)</small> ' +
   '<button type="button" class="mur-range-list-btn" data-count="0" disabled ' +
   'style="margin-left:6px;padding:3px 8px;font-size:12px;border:1px solid #d1d5db;border-radius:6px;background:#f9fafb;color:#6b7280;cursor:not-allowed" ' +
-  'title="Daftar input murajaah (rentang)">Lihat</button>';
+  'title="Daftar input murajaah (rentang)">Unduh</button>';
       td.dataset.murRangeTotal = "0.00";
       td.dataset.murRangePsum  = "0";
       td.dataset.murRangePavg  = "0";
@@ -8954,7 +9066,22 @@ var btnStyle = btnEnabled
 (function(){
   function fmtID(iso){ if(!iso) return ''; var a=String(iso).split('-'); return a.length===3? (a[2]+'/'+a[1]+'/'+a[0]) : iso; }
   function num(v){ var n=parseFloat(String(v==null?'':v).replace(/[^0-9.,-]/g,'').replace(',', '.')); return isFinite(n)?n:0; }
+  // === Tambahan: update total keseluruhan di bawah tabel modal ===
+function updateMrlSum(list){
+  var sum = (list||[]).reduce(function(acc, it){
+    return acc + num(it.total);
+  }, 0);
+  var box = document.getElementById('mrl-sum');
+  if (!box) return;
+  if (!list || !list.length){
+    box.style.display = 'none';
+  } else {
+    box.textContent = 'Total keseluruhan: ' + sum.toFixed(2) + ' juz';
+    box.style.display = '';
+  }
+}
 
+	
   function _kelasNow(){
     if (window.kelasNow) return window.kelasNow();
     var sel = document.querySelector('select#kelasSelect, select[name="kelas"], #kelas, .kelas, .kelas-select, .kelasSelect');
@@ -9194,6 +9321,7 @@ function renderSessionHTML(s){
         tb.appendChild(trEl);
       }
     }
+	updateMrlSum(normalized);
 
     var search = document.getElementById('mrl-search');
     search.value = '';
@@ -9223,6 +9351,7 @@ function renderSessionHTML(s){
 '<td style="padding:8px 10px;border-bottom:1px solid #eee;white-space:pre-wrap;vertical-align:top">'+ renderSessionHTML(it2.s3) +'</td>'
         tb.appendChild(trEl2);
       }
+	updateMrlSum(filtered);
     };
 
     box.style.display = 'flex';
@@ -9257,7 +9386,6 @@ function renderSessionHTML(s){
 // D. MURAJAAH 3 SESI
 // ============================	
 </script>
-
 
 <script>
   // ====== KONFIG (opsional dari window.*) ======
@@ -11581,7 +11709,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       document.getElementById('thmsTitleMode').textContent = '— Per Halaqoh (Ustadz)';
       const fmt = (window.fmtD_M_YYYY || (x=>x));
-      document.getElementById('thmsSub').textContent = `Periode: ${fmt(startDate)} s.d. ${fmt(endDate)}`;
+      document.getElementById('thmsSub').textContent = `Periode Tahfiz: ${fmt(startDate)} s.d. ${fmt(endDate)}`;
       document.getElementById('thmsCacheFlag').style.display = fromCache ? '' : 'none';
 
       document.getElementById('thmsCardKelompokTitle').textContent = 'Total Halaqoh';
@@ -11758,7 +11886,7 @@ document.addEventListener("DOMContentLoaded", () => {
         doc.text('Live Grafik THMS — Per Halaqoh (Ustadz)', margin, 40);
         doc.setFont('helvetica','normal'); doc.setFontSize(11);
         const fmt = (window.fmtD_M_YYYY || (x=>x));
-        doc.text(`Periode: ${fmt(startDate)} s.d. ${fmt(endDate)}${fromCache?'  (cache)':''}`, margin, 58);
+        doc.text(`Periode Tahfiz: ${fmt(startDate)} s.d. ${fmt(endDate)}${fromCache?'  (cache)':''}`, margin, 58);
 
         // Kartu ringkas (grid 5 kolom)
         const yCardsTop = 78, hCard = 48, gap = 10, cols = 5;
@@ -11839,7 +11967,7 @@ document.addEventListener("DOMContentLoaded", () => {
 </script>
 
 
-<!-- ===== SIMPAN RENTANG TANGGAL DOWNLOAD PDF DLL ===== -->		
+<!-- ===== SIMPAN RENTANG TANGGAL DOWNLOAD PDF DLL ===== -->
 <script>
 (function(){
   const startEl = document.getElementById('pdf-start-date');
@@ -11851,9 +11979,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const kelasEl = document.getElementById('kelasSelect');
   const keyFor = () => `raportahfiz.rekapRange.${kelasEl?.value || 'ALL'}`;
 
-  // --- Kalau MAU GLOBAL untuk semua kelas, pakai ini:
-  // const keyFor = () => 'raportahfiz.rekapRange.GLOBAL';
-
   // ====== UTIL ======
   const isISO = v => /^\d{4}-\d{2}-\d{2}$/.test(v);
   const pad2  = n => String(n).padStart(2,'0');
@@ -11864,12 +11989,9 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function load(){
-    // ambil data tersimpan untuk kelas aktif
     let obj = {};
     try { obj = JSON.parse(localStorage.getItem(keyFor()) || '{}'); } catch(e){}
-    const { start, end } = obj;
-
-    // set nilai input (pakai default kalau kosong/tidak valid)
+    const { start, end } = obj || {};
     const def = monthToDateDefault();
     startEl.value = isISO(start) ? start : (startEl.value || def.start);
     endEl.value   = isISO(end)   ? end   : (endEl.value   || def.end);
@@ -11887,28 +12009,23 @@ document.addEventListener("DOMContentLoaded", () => {
     localStorage.setItem(keyFor(), JSON.stringify(data));
   }
 
-  // ====== EVENT LISTENERS ======
   startEl.addEventListener('change', save);
   endEl.addEventListener('change', save);
-  // Per kelas: saat ganti kelas → load kunci yang berbeda
   kelasEl?.addEventListener('change', load);
 
-  // Muat saat awal
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', load);
   } else {
     load();
   }
 
-  // (Opsional) tombol/debug untuk reset penyimpanan
+  // (opsional) reset
   window.clearSavedRekapRange = function(){
     localStorage.removeItem(keyFor());
     load();
   };
 })();
-</script>		
-
-
+</script>
 
 <!-- Modal: Daftar Input Murajaah (Rentang) -->
 <div id="murRangeListModal" style="display:none;position:fixed;inset:0;z-index:9999;align-items:center;justify-content:center">
@@ -11919,7 +12036,16 @@ document.addEventListener("DOMContentLoaded", () => {
         <div id="mrl-title" style="font-weight:700">Daftar Murajaah (Rentang)</div>
         <div id="mrl-sub" style="font-size:12px;color:#6b7280"></div>
       </div>
-      <button data-close-mur-range-list style="border:1px solid #e5e7eb;border-radius:8px;padding:6px 10px;font-size:12px">Tutup</button>
+      <div style="display:flex;gap:8px">
+  <button id="mrl-download"
+    style="border:1px solid #d1d5db;border-radius:8px;padding:6px 10px;font-size:12px;background:#eef2ff;color:#1e40af">
+    Unduh PDF
+  </button>
+  <button data-close-mur-range-list
+    style="border:1px solid #e5e7eb;border-radius:8px;padding:6px 10px;font-size:12px">
+    Tutup
+  </button>
+</div>
     </div>
     <div style="padding:10px 16px">
   <input
@@ -11944,8 +12070,328 @@ document.addEventListener("DOMContentLoaded", () => {
       <div id="mrl-empty" style="text-align:center;color:#6b7280;font-size:13px;padding:16px;display:none">
         Belum ada input murajaah pada rentang ini.
       </div>
+		<!-- ⬇⬇ Tambahan: total keseluruhan -->
+      <div id="mrl-sum"
+           style="margin:10px 16px 16px;border-top:1px solid #e5e7eb;padding-top:10px;
+                  font-weight:600;color:#111827;display:none">
+        Total keseluruhan: 0.00 juz
+      </div>
+      <!-- ⬆⬆ Tambahan -->
     </div>
   </div>
-</div>		
+</div>
+
+<script>
+// === Murajaah Range → Download PDF LANGSUNG (jsPDF) ===
+// A3 landscape • kolom dinamis • badge berwarna • "Surah X s.d Y"
+// Baris kosong disembunyikan • Badge/teks dipusatkan vertikal
+// + RINGKASAN: Total Juz (di bagian bawah)
+
+(function(){
+  // ---------- Utils DOM ----------
+  const $ = s => document.querySelector(s);
+  const text = el => (el ? String(el.innerText || el.textContent || '').trim() : '');
+
+  // ---------- Warna badge predikat ----------
+  function predStyle(letter){
+    const t = (letter||'').toUpperCase().trim();
+    if (t==='A+') return { bg:[220,252,231], br:[134,239,172], fg:[22,101,52]  };
+    if (t==='A')  return { bg:[234,250,240], br:[167,243,208], fg:[22,101,52]  };
+    if (t==='B')  return { bg:[219,234,254], br:[147,197,253], fg:[30,58,138]  };
+    if (t==='C')  return { bg:[255,237,213], br:[253,186,116], fg:[154,52,18]  };
+    if (t==='D')  return { bg:[255,228,230], br:[254,205,211], fg:[159,18,57]  };
+    return null;
+  }
+  function extractHuruf(sessionText){
+    const m = (sessionText||'').match(/\((A\+|A|B|C|D)\)/i);
+    return m ? m[1].toUpperCase() : '';
+  }
+
+  // ---------- Deteksi kolom dari THEAD modal ----------
+  function detectColumns(){
+    const thead = $('#mrl-tbody')?.parentNode?.querySelector('thead');
+    if (!thead) return null;
+    const ths = [...thead.querySelectorAll('th')].map(th => text(th));
+    const cols = [];
+    ths.forEach((label, idx) => {
+      const L = label.toLowerCase();
+      if (L.includes('tanggal')) cols.push({type:'tgl', label:'Tanggal', idx});
+      else if (L.includes('total')) cols.push({type:'total', label:'Total', idx});
+      else if (L.includes('sesi')) cols.push({type:'sesi', label:label, idx}); // Sesi 1/2/3
+    });
+    return cols;
+  }
+
+  // ---------- Row kosong? (semua kolom Sesi kosong) ----------
+  function isRowEmpty(tr, sesiIdx){
+    const c = tr.children; if (!c) return true;
+    return sesiIdx.every(i => !text(c[i]));
+  }
+
+  // ---------- Normalisasi teks sesi: "a:b → c:d" → "Surah a:b s.d c:d" ----------
+  const ARROW_RE = /(\d+\s*:\s*\d+)\s*[\u2192\-–—>]\s*(\d+\s*:\s*\d+)/;
+  const normalizeSessionText = s => s ? s.replace(ARROW_RE, (_,a,b)=>`Surah ${a} s.d ${b}`) : s;
+
+  // ---------- Kumpulkan data baris dari tbody (mengikuti kolom terdeteksi) ----------
+  function collectRows(cols){
+    const tbody = $('#mrl-tbody'); if (!tbody) return [];
+    const sesiIdx = cols.filter(c=>c.type==='sesi').map(c=>c.idx);
+    const out = [];
+    tbody.querySelectorAll('tr').forEach(tr=>{
+      if (isRowEmpty(tr, sesiIdx)) return;
+      const row = cols.map(c=>{
+        const td = tr.children[c.idx];
+        let v = text(td);
+        if (c.type==='sesi') v = normalizeSessionText(v);
+        return v;
+      });
+      out.push(row);
+    });
+    return out;
+  }
+
+  // ---------- parser angka "1.00 juz" → 1.00 ----------
+  function parseJuz(s){
+    if (!s) return 0;
+    let v = String(s).toLowerCase().replace(/juz/g,'').trim();
+    v = v.replace(/[^\d,.\-]/g,'');
+    // normalisasi koma/desimal
+    const c=v.lastIndexOf(','), d=v.lastIndexOf('.');
+    if (c>-1 && d>-1){ if (c>d){ v=v.replace(/\./g,'').replace(',', '.'); } else { v=v.replace(/,/g,''); } }
+    else if (c>-1){ v=v.replace(/\./g,'').replace(',', '.'); }
+    else { v=v.replace(/,/g,''); }
+    const n = parseFloat(v);
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  // ---------- Layout PDF (A3 landscape) ----------
+  const M = { L:12, T:12, R:12, B:10 };
+  const PAGE_W = 420, PAGE_H = 297;                   // A3 landscape (mm)
+  const USABLE_W = PAGE_W - M.L - M.R;                // 396mm
+  const HEADER_FILL = [33,150,243], HEADER_TXT=[255,255,255];
+  const GRID=[224,224,224], ZEBRA=[248,250,252];
+
+  // Lebar kolom dinamis: Tanggal & Total fixed-min, sisa untuk Sesi (dibagi rata)
+  function computeColWidths(cols){
+    const nSesi = cols.filter(c=>c.type==='sesi').length;
+    const hasTgl = cols.some(c=>c.type==='tgl');
+    const hasTot = cols.some(c=>c.type==='total');
+
+    const tglMin = hasTgl ? 40 : 0;
+    const totMin = hasTot ? 32 : 0;
+    const fixed = tglMin + totMin;
+
+    const rem = Math.max(USABLE_W - fixed, 60 * nSesi); // jaga minimal
+    const sesiW = nSesi ? rem / nSesi : 0;
+
+    const mapW = {};
+    cols.forEach(c=>{
+      if (c.type==='tgl')   mapW[c.idx] = tglMin;
+      else if (c.type==='total') mapW[c.idx] = totMin;
+      else mapW[c.idx] = sesiW;
+    });
+    return cols.map(c=>mapW[c.idx]);
+  }
+
+  function tryJsPDFDownload(rows, cols, colW, title, sub){
+    const jsPDF = window.jspdf ? window.jspdf.jsPDF : (window.jsPDF || null);
+    if (!jsPDF) return false;
+
+    const doc = new jsPDF({ unit:'mm', format:'a3', orientation:'landscape' });
+    const headers = cols.map(c=>c.label);
+    const totalIdx = cols.findIndex(c=>c.type==='total');
+
+    // ==== hitung total juz (hanya baris tercetak) ====
+    let totalJuz = 0;
+    if (totalIdx >= 0){
+      for (let i=0;i<rows.length;i++){
+        totalJuz += parseJuz(rows[i][totalIdx]);
+      }
+    }
+    totalJuz = Math.max(0, totalJuz);
+    const hariCount = rows.length;
+
+    function drawHeader(y){
+      doc.setFont('helvetica','bold'); doc.setFontSize(15); doc.setTextColor(0);
+      doc.text(title || 'Daftar Murajaah (Rentang)', M.L, y); y += 7;
+
+      if (sub){
+        doc.setFont('helvetica','normal'); doc.setFontSize(11);
+        const lines = doc.splitTextToSize(sub, USABLE_W);
+        lines.forEach(line => { doc.text(line, M.L, y); y += 5; });
+        y += 2;
+      }
+
+      // header tabel
+      let x = M.L, thH = 9;
+      doc.setFillColor(...HEADER_FILL);
+      doc.setDrawColor(...GRID);
+      doc.rect(M.L, y, USABLE_W, thH, 'F');
+
+      doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(...HEADER_TXT);
+      headers.forEach((h,i)=>{ doc.text(h, x+2, y+5.8); if(i>0) doc.line(x, y, x, y+thH); x += colW[i]; });
+      doc.line(M.L, y+thH, M.L+USABLE_W, y+thH);
+      doc.setTextColor(0);
+      return y + thH + 2;
+    }
+
+    function drawFooter(page){
+      doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(110);
+      doc.text(`Generated ${new Date().toLocaleString()} • Page ${page}`, M.L, PAGE_H - 6);
+      doc.setTextColor(0);
+    }
+
+    // kotak ringkasan di bawah
+    function drawSummary(y){
+      const label = `Ringkasan: Total Juz = ${totalJuz.toFixed(2)} juz • Jumlah hari = ${hariCount}`;
+      const boxH = 11;
+      if (y + boxH > PAGE_H - M.B){ // pindah halaman jika tak muat
+        drawFooter(page);
+        doc.addPage('a3','landscape');
+        page++;
+        y = M.T; // tidak perlu header tabel lagi untuk ringkasan
+      }
+      // garis pemisah
+      doc.setDrawColor(...GRID);
+      doc.line(M.L, y, M.L + USABLE_W, y);
+      y += 3;
+
+      // kotak
+      doc.setFillColor(245, 245, 245);
+      doc.setDrawColor(200, 200, 200);
+      if (doc.roundedRect){
+        doc.roundedRect(M.L, y, USABLE_W, boxH, 2.5, 2.5, 'FD');
+      } else {
+        doc.rect(M.L, y, USABLE_W, boxH, 'FD');
+      }
+      doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(34,34,34);
+      doc.text(label, M.L + 4, y + 7);
+      return y + boxH;
+    }
+
+    let page = 1;
+    let y = drawHeader(M.T);
+    doc.setDrawColor(...GRID); doc.setLineWidth(0.2);
+
+    for (let r=0; r<rows.length; r++){
+      // wrap per kolom
+      const wrapped = rows[r].map((cell, i)=>{
+        const innerW = Math.max(colW[i] - 8, 20);
+        return doc.splitTextToSize(cell || '', innerW);
+      });
+
+      // tinggi baris
+      let linesMax = 1; wrapped.forEach(w => linesMax = Math.max(linesMax, w.length));
+      const lineH = 5;
+      const rowH  = Math.max(10, linesMax * lineH + 6);
+
+      // page break
+      if (y + rowH > PAGE_H - M.B - 20){ // sisakan ruang untuk ringkasan/footnote
+        drawFooter(page);
+        doc.addPage('a3','landscape');
+        page++; y = drawHeader(M.T);
+      }
+
+      // zebra row
+      if (r % 2 === 1){ doc.setFillColor(...ZEBRA); doc.rect(M.L, y, USABLE_W, rowH, 'F'); }
+
+      // === ISI: pusatkan badge & teks secara VERTIKAL ===
+      doc.setFont('helvetica','normal'); doc.setFontSize(10);
+      let x = M.L;
+
+      for (let c=0; c<cols.length; c++){
+        const col   = cols[c];
+        const lines = wrapped[c];
+        const textBlockH = Math.max(1, lines.length) * lineH;
+
+        if (col.type === 'sesi'){
+          const sesText = rows[r][c] || '';
+          const huruf   = extractHuruf(sesText);
+          const st      = predStyle(huruf);
+
+          // dimensi badge
+          const padX = 2.2, padY = 2.0;
+          const badgeW = Math.max(colW[c] - 3.0, 18);
+          const badgeH = Math.max(8, textBlockH + padY*2);
+
+          // posisi badge tengah sel
+          const badgeY = y + (rowH - badgeH)/2;
+
+          if (st){
+            doc.setFillColor(...st.bg);
+            doc.setDrawColor(...st.br);
+            if (doc.roundedRect){
+              doc.roundedRect(x+1.2, badgeY, badgeW-2.4, badgeH, 2.5, 2.5, 'FD');
+            } else {
+              doc.rect(x+1.2, badgeY, badgeW-2.4, badgeH, 'FD');
+            }
+            doc.setTextColor(...st.fg);
+          } else {
+            doc.setTextColor(0);
+          }
+
+          // teks di dalam badge → dipusatkan vertikal
+          const textY = badgeY + (badgeH - textBlockH)/2 + 4; // +4 = baseline tweak
+          for (let li=0; li<lines.length; li++){
+            doc.text(lines[li], x + padX + 1.5, textY + li*lineH);
+          }
+          doc.setTextColor(0);
+
+        } else {
+          // kolom Tanggal / Total → pusat vertikal di dalam cell
+          const baseY = y + (rowH - textBlockH)/2 + 4;
+          lines.forEach((ln,i)=> doc.text(ln, x+1.8, baseY + i*lineH));
+        }
+
+        // grid vertikal
+        doc.setDrawColor(...GRID);
+        doc.line(x, y, x, y + rowH);
+        x += colW[c];
+      }
+
+      // grid kanan & bawah
+      doc.line(M.L + USABLE_W, y, M.L + USABLE_W, y + rowH);
+      doc.line(M.L, y + rowH, M.L + USABLE_W, y + rowH);
+
+      y += rowH;
+    }
+
+    // ---- Ringkasan di bawah tabel ----
+    y += 6;
+    y = drawSummary(y);
+
+    drawFooter(page);
+    doc.save('murajaah-range-a3.pdf'); // langsung download
+    return true;
+  }
+
+  function handleDownload(){
+    const title = $('#mrl-title') ? $('#mrl-title').textContent.trim() : 'Daftar Murajaah (Rentang)';
+    const sub   = $('#mrl-sub')   ? $('#mrl-sub').textContent.trim()   : '';
+
+    const cols  = detectColumns();
+    if (!cols || !cols.length){ alert('Tabel modal tidak ditemukan.'); return; }
+
+    const rows  = collectRows(cols);
+    if (!rows.length){ alert('Tidak ada data untuk diunduh.'); return; }
+
+    const colW  = computeColWidths(cols);
+
+    let ok = false;
+    try { ok = tryJsPDFDownload(rows, cols, colW, title, sub); } catch(e) { ok = false; }
+    if (!ok) alert('jsPDF belum tersedia. Tambahkan <script jsPDF> di <head>.');
+  }
+
+  // Tombol di header modal: <button id="mrl-download">Unduh PDF</button>
+  document.addEventListener('click', e=>{
+    if (e.target && e.target.id === 'mrl-download') handleDownload();
+  });
+})();
+</script>
+
+
+
+
+		
 </body>
 </html>
