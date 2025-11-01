@@ -2901,14 +2901,14 @@ logoutBtn.addEventListener("click", () => {
   }, 500);
 });
 
-// ============ ABSENSI FLEX – UTIL & RENDER (global, ringan) ============
+<!-- ============ ABSENSI FLEX – UTIL & RENDER (global, ringan) ============ -->
 (function(){
   // Konfigurasi global yang bisa dioverride sebelum loadSantriData jalan
   window.ABS_FLEX_CFG = window.ABS_FLEX_CFG || {
     statuses: ["hadir","izin","sakit","alpha"],
-    perStatus: Number(window.ABS_FLEX_PER_STATUS ?? 2), // default 2 unit per status (hadir2..2, dst)
-	defaultTarget: 2,                                   // default denominator
-    maxTarget: 2,                                       // denominator 1..6
+    perStatus: Number(window.ABS_FLEX_PER_STATUS ?? 1), // default 2 unit per status (hadir1..2, dst)
+    defaultTarget: 1,                                   // default denominator
+    maxTarget: 1,                                       // denominator 1..6
     labels: null                                        // {hadir:[...], izin:[...], ...] (opsional)
   };
 
@@ -2934,7 +2934,7 @@ logoutBtn.addEventListener("click", () => {
     const Title   = st.charAt(0).toUpperCase() + st.slice(1);
     const idx     = i - 1;
     const per     = ABS_FLEX_CFG.perStatus|0;
-    const sesiAll = ["Subuh","Pagi","Sore","Malam","Ekstra 1","Ekstra 2"];
+    const sesiAll = ["Sesi"];
 
     // Legacy: jika tetap 2 sesi, pertahankan Pagi/Sore
     if (per === 2){
@@ -3122,9 +3122,7 @@ logoutBtn.addEventListener("click", () => {
   window.__absflex_computePercent = computePercent;
 })();
 
-
-
-// === helper: buat modal overlay Absensi Flex secara dinamis (sekali saja)
+<!-- === helper: buat modal overlay Absensi Flex secara dinamis (sekali saja) -->
 (function(){
   function ensureAbsensiModal(){
     if (document.getElementById("absensiModalOverlay")) return;
@@ -3138,7 +3136,7 @@ logoutBtn.addEventListener("click", () => {
     overlay.innerHTML = `
       <div class="absensi-modal-card" style="background:#fff; padding:20px; border-radius:12px; min-width:340px; max-width:90%; max-height:90%; overflow:auto;">
         <div style="display:flex;align-items:center;gap:10px;justify-content:space-between;margin-bottom:10px;">
-          <h3 style="margin:0;font-size:18px;">Edit Absensi</h3>
+          <h3 style="margin:0;font-size:18px;"><span id="absensiModalTitleName" style="font-weight:600;"></span></h3>
           <button id="absensiModalClose" style="padding:6px 10px;border:1px solid #e5e7eb;border-radius:8px;background:#1E88E5;">Tutup</button>
         </div>
         <div id="absensiModalContent"></div>
@@ -3159,6 +3157,69 @@ logoutBtn.addEventListener("click", () => {
   window.ensureAbsensiModal = ensureAbsensiModal;
 })();
 
+<!-- === listener ringan: set judul modal dari baris (tanpa buka modal / tanpa render) -->
+(function(){
+  // Ambil teks aman dari sel (support <a>, input/select)
+  function cellText(el){
+    if (!el) return '';
+    const input = el.querySelector('input,select,textarea');
+    if (input) return (input.value || input.textContent || '').trim();
+    const a = el.querySelector('a');
+    if (a) return (a.textContent || a.innerText || '').trim();
+    return (el.textContent || el.innerText || '').trim();
+  }
+
+  // Peta index kolom berdasarkan THEAD; fallback 0:Nis, 1:Nama
+  function headerMapForTable(table){
+    const map = { nis: 0, nama: 1 };
+    if (!table) return map;
+    const ths = table.querySelectorAll('thead th');
+    if (!ths.length) return map;
+    for (let i=0;i<ths.length;i++){
+      const t = (ths[i].textContent || '').trim().toLowerCase();
+      if (t === 'nis')  map.nis  = i;
+      if (t === 'nama') map.nama = i;
+    }
+    return map;
+  }
+
+  function extractIdentityFromButton(btn){
+    const tr = btn.closest('tr');
+    const table = tr && tr.closest('table');
+    const map = headerMapForTable(table);
+    const tds = tr ? tr.querySelectorAll('td') : [];
+    const nis  = cellText(tds[map.nis]  || tds[0]);
+    const nama = cellText(tds[map.nama] || tds[1]);
+    return { nis, nama };
+  }
+
+  function setAbsensiModalTitle(nis, nama){
+    const span = document.getElementById('absensiModalTitleName');
+    if (!span) return;
+    const n1 = (nama||'').trim();
+    const n2 = (nis||'').trim();
+    span.textContent = (n1 && n2) ? `${n1} (${n2})`
+                     :  n1 ? n1
+                     :  n2 ? `NIS ${n2}`
+                     :  '';
+  }
+
+  // Ekspor fungsi publik jika ingin dipanggil dari handler lama Anda
+  window.__setAbsensiTitleFromBtn = function(btn){
+    window.ensureAbsensiModal && window.ensureAbsensiModal();
+    const { nis, nama } = extractIdentityFromButton(btn);
+    setAbsensiModalTitle(nis, nama);
+  };
+
+  // Listener global: hanya set judul; tidak membuka modal & tidak render
+  document.addEventListener('click', function(e){
+    const btn = e.target.closest('.btn-absensi-flex');
+    if (!btn) return;
+    window.__setAbsensiTitleFromBtn(btn);
+    // Tidak preventDefault / stopPropagation — biarkan handler lama berjalan
+  }, { passive: true });
+})();
+<!-- ============ ABSENSI FLEX – UTIL & RENDER (global, ringan) ============ -->
 
 
 // === Load Santri Data ===
