@@ -2946,12 +2946,12 @@ logoutBtn.addEventListener("click", () => {
   })();
 
   // Konfigurasi global yang bisa dioverride sebelum loadSantriData jalan
-  window.ABS_FLEX_CFG = window.ABS_FLEX_CFG || {
+    window.ABS_FLEX_CFG = window.ABS_FLEX_CFG || {
     statuses: ["hadir","izin","sakit","alpha"],
-    perStatus: Number(window.ABS_FLEX_PER_STATUS ?? 1), // default 2 unit per status (hadir1..2, dst)
-    defaultTarget: 1,                                   // default denominator
-    maxTarget: 1,                                       // denominator 1..6
-    labels: null                                        // {hadir:[...], izin:[...], ...] (opsional)
+    perStatus: Number(window.ABS_FLEX_PER_STATUS ?? 1), // ✅ default 2 (Pagi/Sore)
+    defaultTarget: 1,                                   // ✅ bawa default ke 2
+    maxTarget: 1,                                       // ✅ dukung 1..6 sesi aktif
+    labels: null
   };
 
   // --- Tambahan: helper clone aman & di-expose global ---
@@ -2993,22 +2993,14 @@ logoutBtn.addEventListener("click", () => {
     const Title   = st.charAt(0).toUpperCase() + st.slice(1);
     const idx     = i - 1;
     const per     = ABS_FLEX_CFG.perStatus|0;
-    const sesiAll = ["Sesi"];
-
-    // Legacy: jika tetap 2 sesi, pertahankan Pagi/Sore
     if (per === 2){
-      const sesi = (idx === 0) ? "Pagi" : "Sore";
-      return `${Title} ${sesi} ${i}`;
-    }
-
-    // Jika lebih dari 2 sesi, gunakan daftar sesi lengkap
-    if (per > 2){
-      const sesi = sesiAll[idx] || `Sesi ${i}`;
-      return `${Title} ${sesi} ${i}`;
-    }
-
-    // Fallback (perStatus=1)
-    return `${Title} ${i}`;
+	const sesi = (idx === 0) ? "Pagi" : "Sore";
+	return `${Title} ${sesi}`; // ✅ tidak ulang angka
+	}
+	if (per > 2){
+	return `${Title} Sesi ${i}`; // ✅ Sesi 1..N
+	}
+	return `${Title} ${i}`;
   }
 
   function labelFor(st, i){
@@ -3238,7 +3230,7 @@ logoutBtn.addEventListener("click", () => {
       <div class="absensi-modal-card" style="background:#fff; padding:20px; border-radius:12px; min-width:340px; max-width:90%; max-height:90%; overflow:auto;">
         <div style="display:flex;align-items:center;gap:10px;justify-content:space-between;margin-bottom:10px;">
           <h3 style="margin:0;font-size:18px;"><span id="absensiModalTitleName" style="font-weight:600;"></span></h3>
-          <button id="absensiModalClose" style="padding:6px 10px;border:1px solid #e5e7eb;border-radius:8px;background:#1E88E5;">Tutup</button>
+          <button id="absensiModalClose" style="padding:6px 10px;border:1px solid #e5e7eb;border-radius:8px;background:#1E88E5;color:#fff;">Tutup</button>
         </div>
         <div id="absensiModalContent"></div>
       </div>
@@ -3510,7 +3502,7 @@ async function loadSantriData() {
       for (let s = sFrom; s <= sTo; s++) {
         const surah = surahList.find(x => Number(x.id) === s);
         if (!surah) continue;
-        const totalAy = Number(s.jumlah_ayat || 0);
+        const totalAy = Number(surah.jumlah_ayat || 0); // ✅ FIX
         const startAy = (s === sFrom) ? aFrom : 1;
         const endAy   = (s === sTo)   ? aTo   : totalAy;
 
@@ -3583,15 +3575,19 @@ async function loadSantriData() {
   window.__makeSurahOptions = makeSurahOptions;
 
   // AYAT dropdown bertanda ✓/🟢 — fallback aman bila Tahap 2 belum terpasang
-  function fillAyatOptionsMarked(selectEl, surahId, selectedAyat = "") {
-    if (typeof window.fillAyatOptionsMarked === "function") {
-      window.fillAyatOptionsMarked(selectEl, surahId, selectedAyat);
-      return;
-    }
-    if (!selectEl) return;
-    selectEl.innerHTML = `<option value="">— Ayat —</option>`;
-    if (selectedAyat) selectEl.value = String(selectedAyat);
+function _fillAyatOptionsMarkedLocal(selectEl, surahId, selectedAyat = "") {
+  if (!selectEl) return;
+  selectEl.innerHTML = `<option value="">— Ayat —</option>`;
+  if (selectedAyat) selectEl.value = String(selectedAyat);
+}
+// helper: pilih global jika ada, selain itu pakai lokal
+function callFillAyatOptions(selectEl, surahId, selectedAyat=""){
+  if (typeof window.fillAyatOptionsMarked === "function") {
+    window.fillAyatOptionsMarked(selectEl, surahId, selectedAyat);
+  } else {
+    _fillAyatOptionsMarkedLocal(selectEl, surahId, selectedAyat);
   }
+}
 
   try {
     // MASTER santri
@@ -3891,8 +3887,8 @@ async function loadSantriData() {
         if (dariArr[0])   surahDari.value   = dariArr[0];
         if (sampaiArr[0]) surahSampai.value = sampaiArr[0];
 
-        fillAyatOptionsMarked(ayatDari,   surahDari.value || "",   dariArr[1]   || "");
-        fillAyatOptionsMarked(ayatSampai, surahSampai.value || "", sampaiArr[1] || "");
+        callFillAyatOptions(ayatDari,   surahDari.value || "",   dariArr[1]   || "");
+		callFillAyatOptions(ayatSampai, surahSampai.value || "", sampaiArr[1] || "");
 
         if (dataAbsensi?.tilawahTotalJuz) {
           const tj = Number(dataAbsensi.tilawahTotalJuz);
@@ -3913,11 +3909,11 @@ async function loadSantriData() {
 
         surahDari.addEventListener("change", () => {
           rebuildSurahDari();
-          fillAyatOptionsMarked(ayatDari, surahDari.value || "", "");
+          callFillAyatOptions(ayatDari, surahDari.value || "", "");
           if (surahDari.value) {
             surahSampai.value = surahDari.value;
             rebuildSurahSampai();
-            fillAyatOptionsMarked(ayatSampai, surahSampai.value || "", "");
+            callFillAyatOptions(ayatSampai, surahSampai.value || "", "");
             ayatSampai.value = ayatDari.value || "";
           } else {
             surahSampai.value = "";
@@ -3929,7 +3925,7 @@ async function loadSantriData() {
 
         surahSampai.addEventListener("change", () => {
           rebuildSurahSampai();
-          fillAyatOptionsMarked(ayatSampai, surahSampai.value || "", "");
+          callFillAyatOptions(ayatSampai, surahSampai.value || "", "");
           updateTotalJuz(row);
         });
 
@@ -4129,13 +4125,8 @@ async function loadSantriData() {
 
   overlay.style.display = "none";
 }
-// ============================
-// A. LOAD SANTRI DATA
-// ============================	 
+	
 
-// ============================
-// A. LOAD SANTRI DATA
-// ============================		 
 // ====== Dropdown Ayat (OWNER-AWARE): ayat terpakai disembunyikan KECUALI jika baris ini adalah owner-nya ======
 // ====== Dropdown Ayat (OWNER-AWARE + RENTANG OWNER TETAP TAMPIL) ======
 function fillAyatOptionsMarked(selectEl, surahId, selectedAyat = "") {
@@ -4244,7 +4235,7 @@ function fillAyatOptionsMarked(selectEl, surahId, selectedAyat = "") {
 
     let label = iStr;
     if (isUsed)   label = `✓ ${label}`;   // tetap beri tanda, meski ditampilkan
-    if (isLatest) label = `${label} ★`;
+    if (isLatest) label = `${label} 🟢`;
 
     const opt = document.createElement("option");
     opt.value = iStr;
@@ -4390,9 +4381,7 @@ function updateTotalJuz(row) {
 // Listener tetap
 kelasSelect.addEventListener("change", loadSantriData);
 tanggalInput.addEventListener("change", loadSantriData);
-// ============================
-// A. LOAD SANTRI DATA
-// ============================	 
+	 
 
 // ============================
 // A. LOAD SANTRI DATA
@@ -4751,7 +4740,7 @@ async function simpanDataMutabaah(saveBtn){
           for (let s = Number(sFrom); s <= Number(sTo); s++) {
             const surah = surahList.find(x => Number(x.id) === s);
             if (!surah) continue;
-            const totalAy = Number(s.jumlah_ayat || 0);
+            const totalAy = Number(surah.jumlah_ayat || 0); // ✅ FIX
             const startAy = (s === Number(sFrom)) ? Number(aFrom) : 1;
             const endAy   = (s === Number(sTo))   ? Number(aTo)   : totalAy;
 
@@ -4876,7 +4865,6 @@ document.querySelectorAll('#santri-table tbody tr .abs-flex-cell').forEach(cell=
 // ============================
 // A. LOAD SANTRI DATA
 // ============================
-
 
 // ============================
 // B. DOWNLOAD PDF
