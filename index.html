@@ -2743,12 +2743,12 @@ background:rgba(0,0,0,0.5); z-index:999; justify-content:center; align-items:cen
 
   // === Fungsi atur dropdown kelas ===
 function aturDropdownKelas(user) {
-  const semuaKelas = [  "kelas_012025","kelas_022025","kelas_032025","kelas_042025","kelas_052025","kelas_062025",
+  const semuaKelas = [  "kelas_012526","kelas_022025","kelas_032025","kelas_042025","kelas_052025","kelas_062025",
     "kelas_072025","kelas_082025","kelas_092025","kelas_102025","kelas_112025","kelas_122025",
     "kelas_132025","kelas_142025","kelas_152025","kelas_162025","kelas_172025","kelas_182025",
     "kelas_192025","kelas_202025","kelas_212025","kelas_222025","kelas_232025","kelas_242025"];
 
-  const namaKelasCustom = {  kelas_012025: "Ust. Tukimin Abu Rasyid BA",
+  const namaKelasCustom = {  kelas_012526: "Ust. Tukimin Abu Rasyid BA",
   kelas_022025: "Ust. Dicky Miswardi BA",
   kelas_032025: "Ust. Jundullah BA",
   kelas_042025: "Ust. Abdullah",
@@ -4912,7 +4912,7 @@ function getSelectedKelas(){
   // === Helper Kelas/Kelompok ===
 function buildKelasKelompokLine(kelas, kelasEl) {
   const kelasNum = (String(kelas||'').match(/(\d+)/)?.[1]) || (kelas || '-');
-  const custom = window.namaKelasCustom || window.NAMA_KELAS_CUSTOM || {  kelas_012025: "Ust. Tukimin Abu Rasyid BA",
+  const custom = window.namaKelasCustom || window.NAMA_KELAS_CUSTOM || {  kelas_012526: "Ust. Tukimin Abu Rasyid BA",
   kelas_022025: "Ust. Dicky Miswardi BA",
   kelas_032025: "Ust. Jundullah BA",
   kelas_042025: "Ust. Abdullah",
