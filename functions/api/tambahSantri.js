@@ -53,8 +53,23 @@ export async function onRequestPost({ request, env }) {
   if (!/^[1-6]$/.test(String(semester))) {
     return json({ error: "Semester harus 1-6." }, 400);
   }
-  if (jenjang && !/^A[1-8]$/.test(String(jenjang))) {
-    return json({ error: "Jenjang harus A1-A8 (atau kosong)." }, 400);
+
+  // --- Validasi & normalisasi jenjang: kosong ATAU "A1"… "A999" (case-insensitive, leading zero dinormalisasi)
+  let jenjangNormalized = "";
+  {
+    let j = String(jenjang ?? "").trim();
+    if (j !== "") {
+      j = j.toUpperCase().replace(/\s+/g, ""); // " a001 " -> "A001"
+      const m = /^A(\d{1,3})$/.exec(j);
+      if (!m) {
+        return json({ error: "Jenjang harus A1–A999 (atau kosong)." }, 400);
+      }
+      const n = Number(m[1]);           // "001" -> 1
+      if (!Number.isInteger(n) || n < 1 || n > 999) {
+        return json({ error: "Jenjang harus A1–A999 (atau kosong)." }, 400);
+      }
+      jenjangNormalized = `A${n}`;      // simpan sebagai "A1", "A12", "A999"
+    }
   }
 
   // --- Normalisasi nama file kelas
@@ -116,7 +131,7 @@ export async function onRequestPost({ request, env }) {
     nis: nisKey,
     nama: String(nama).trim(),
     semester: String(semester).trim(),
-    jenjang: String(jenjang).trim(),
+    jenjang: jenjangNormalized, // sudah dinormalisasi (A1..A999) atau ""
   });
 
   // --- 5) Simpan kembali (PUT)
