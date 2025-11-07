@@ -1729,12 +1729,12 @@ function extendSemesterOptions(selectEl, max = SEMESTER_MAX) {
     <label>Jenjang:</label><br>
     <select id="inputJenjang" style="width:90%; margin-bottom:10px;">
   <option value=""></option>
-  <option value="A1">ILA</option>
-  <option value="A2">ILB</option>
-  <option value="A3">ILC</option>
-  <option value="A4">ILD</option>
-  <option value="A5">1A IM</option>
-  <option value="A6">1B IM</option>
+  <option value="A1">1 PDF</option>
+  <option value="A2">2 PDF</option>
+  <option value="A3">3 PDF</option>
+  <option value="A4">1 MA</option>
+  <option value="A5">2 MA</option>
+  <option value="A6">3 MA</option>
   </select>
 
     <div style="margin-top:10px; display:flex; justify-content:space-between; gap:8px;">
@@ -3244,7 +3244,7 @@ async function loadSantriData() {
   overlay.style.display = "flex";
 
   // ===== util jenjang (tetap) =====
-  const JENJANG_MAX = Number(window.JENJANG_MAX ?? 32);
+  const JENJANG_MAX = Number(window.JENJANG_MAX ?? 6);
 
   const parseJenjang = (v) => {
     const m = /^A(\d+)$/.exec(String(v || "").trim());
@@ -3680,12 +3680,12 @@ async function loadSantriData() {
           <td class="col-nama">${santri.nama ?? ""}${subTanggal}</td>
           <td>
             <select class="jenjang">
-    <option value="A1" ${jenNow === 'A1' ? 'selected' : ''}>ILA</option>
-    <option value="A2" ${jenNow === 'A2' ? 'selected' : ''}>ILB</option>
-    <option value="A3" ${jenNow === 'A3' ? 'selected' : ''}>ILC</option>
-    <option value="A4" ${jenNow === 'A4' ? 'selected' : ''}>ILD</option>
-    <option value="A5" ${jenNow === 'A5' ? 'selected' : ''}>1A IM</option>
-    <option value="A6" ${jenNow === 'A6' ? 'selected' : ''}>1B IM</option>
+    <option value="A1" ${jenNow === 'A1' ? 'selected' : ''}>1 PDF</option>
+    <option value="A2" ${jenNow === 'A2' ? 'selected' : ''}>2 PDF</option>
+    <option value="A3" ${jenNow === 'A3' ? 'selected' : ''}>3 PDF</option>
+    <option value="A4" ${jenNow === 'A4' ? 'selected' : ''}>1 MA</option>
+    <option value="A5" ${jenNow === 'A5' ? 'selected' : ''}>2 MA</option>
+    <option value="A6" ${jenNow === 'A6' ? 'selected' : ''}>3 MA</option>
   </select>
           </td>
           <td>
@@ -3710,6 +3710,7 @@ async function loadSantriData() {
     <option value="" ${!ketNow ? 'selected' : ''}></option>
     <option value="SP1" ${ketNow === 'SP1' ? 'selected' : ''}>SP1</option>
     <option value="SP2" ${ketNow === 'SP2' ? 'selected' : ''}>SP2</option>
+    <option value="SP3" ${ketNow === 'SP3' ? 'selected' : ''}>SP3</option>
   </select>
           </td>
           <td>
@@ -9743,7 +9744,7 @@ function renderSessionHTML(s){
 
 <script>
   // ====== KONFIG (opsional dari window.*) ======
-  const JENJANG_MAX = Number(window.JENJANG_MAX ?? 32);             // 34 default; 0 = tanpa batas atas
+  const JENJANG_MAX = Number(window.JENJANG_MAX ?? 6);             // 34 default; 0 = tanpa batas atas
   const JENJANG_SAFETY_CAP = Number(window.JENJANG_SAFETY_CAP ?? 1000); // darurat bila tanpa batas
 
   // ====== Helper jenjang dinamis ======
