@@ -468,7 +468,7 @@ button.lihat-quran-btn:hover::after {
     
     <!-- Header Login (Logo + Judul) -->
     <div class="login-header">
-    <img src="https://raw.githubusercontent.com/raportahfiz/web/main/logortd.png" alt="Logo Mutaba'ah Tahfizh" />
+    <img src="https://raw.githubusercontent.com/raportahfiz/web/main/mtqlogo.png" alt="Logo Mutaba'ah Tahfizh" />
 	<br>
    <h1 class="judul">Mutaba'ah Tahfizh
 Ponpes AL IRSYAD</h1>
@@ -1729,12 +1729,38 @@ function extendSemesterOptions(selectEl, max = SEMESTER_MAX) {
     <label>Jenjang:</label><br>
     <select id="inputJenjang" style="width:90%; margin-bottom:10px;">
   <option value=""></option>
-  <option value="A1">1 PDF</option>
-  <option value="A2">2 PDF</option>
-  <option value="A3">3 PDF</option>
-  <option value="A4">1 MA</option>
-  <option value="A5">2 MA</option>
-  <option value="A6">3 MA</option>
+  <option value="A1">ILA</option>
+  <option value="A2">ILB</option>
+  <option value="A3">ILC</option>
+  <option value="A4">ILD</option>
+  <option value="A5">1A IM</option>
+  <option value="A6">1B IM</option>
+  <option value="A7">1C IM</option>
+  <option value="A8">1D IM</option>
+  <option value="A9">1E IM</option>
+  <option value="A10">1F IM</option>
+  <option value="A11">1G IM</option>
+  <option value="A12">1H IM</option>
+  <option value="A13">1I IM</option>
+  <option value="A14">1J IM</option>
+  <option value="A15">2A IM</option>
+  <option value="A16">2B IM</option>
+  <option value="A17">2C IM</option>
+  <option value="A18">2D IM</option>
+  <option value="A19">2E IM</option>
+  <option value="A20">2F IM</option>
+  <option value="A21">2G IM</option>
+  <option value="A22">2H IM</option>
+  <option value="A23">2I IM</option>
+  <option value="A24">3A IM</option>
+  <option value="A25">3B IM</option>
+  <option value="A26">3C IM</option>
+  <option value="A27">3D IM</option>
+  <option value="A28">3E IM</option>
+  <option value="A29">3F IM</option>
+  <option value="A30">3G IM</option>
+  <option value="A31">3H IM</option>
+  <option value="A32">3I IM</option>
   </select>
 
     <div style="margin-top:10px; display:flex; justify-content:space-between; gap:8px;">
@@ -2717,31 +2743,35 @@ background:rgba(0,0,0,0.5); z-index:999; justify-content:center; align-items:cen
 
   // === Fungsi atur dropdown kelas ===
 function aturDropdownKelas(user) {
-  const semuaKelas = [  "kelas_012526","kelas_022526","kelas_032526","kelas_042526","kelas_052526","kelas_062526",
-    "kelas_072526","kelas_082526","kelas_092526","kelas_102526","kelas_112526","kelas_122526",
-    "kelas_132526","kelas_142526","kelas_152526","kelas_162526","kelas_172526","kelas_182526",
-    "kelas_192526","kelas_202526"];
+  const semuaKelas = [  "kelas_012025","kelas_022025","kelas_032025","kelas_042025","kelas_052025","kelas_062025",
+    "kelas_072025","kelas_082025","kelas_092025","kelas_102025","kelas_112025","kelas_122025",
+    "kelas_132025","kelas_142025","kelas_152025","kelas_162025","kelas_172025","kelas_182025",
+    "kelas_192025","kelas_202025","kelas_212025","kelas_222025","kelas_232025","kelas_242025"];
 
-  const namaKelasCustom = {  kelas_012526: "Ustadzah Lylika Tri Canda Medita",
-  kelas_022526: "Ustadzah Dewi Khumariah Rhasya",
-  kelas_032526: "Ustadzah Nadia Nurfadhilah",
-  kelas_042526: "Ustadzah Eliya",
-  kelas_052526: "Ustadzah Rima Karimah",
-  kelas_062526: "Ustadzah Rishana Hanifa",
-  kelas_072526: "Ustadzah Karimah",
-  kelas_082526: "Ustadzah Nurfadhilah Kamaliyah",
-  kelas_092526: "Ustadzah Umi Muthoharoh",
-  kelas_102526: "Ustadzah Sofi Agnia",
-  kelas_112526: "Ustadzah Ririn Nurialy",
-  kelas_122526: "Ustadzah Zihan Audrian Hidayat",
-  kelas_132526: "Ustadzah Nopia",
-  kelas_142526: "Ustadz Imam Tolhah",
-  kelas_152526: "Ustadz Fahri Aziz",
-  kelas_162526: "Ustadz Saeful Munawar Rizal",
-  kelas_172526: "Ustadz Aflah Musoddaq",
-  kelas_182526: "Ustadz Saif Abdullah",
-  kelas_192526: "Ustadz Muhammad Farhan Hidayat",
-  kelas_202526: "Ustadz Farrid Ilallah"};
+  const namaKelasCustom = {  kelas_012025: "Ust. Tukimin Abu Rasyid BA",
+  kelas_022025: "Ust. Dicky Miswardi BA",
+  kelas_032025: "Ust. Jundullah BA",
+  kelas_042025: "Ust. Abdullah",
+  kelas_052025: "Ust. Ro'uuf Noor Huda Su'udin S.Pd",
+  kelas_062025: "Ust. Salahuddin Santoaji S.T.P",
+  kelas_072025: "Ust. Hammam Ahmed Saleh",
+  kelas_082025: "Ust. Alif Rafiqul",
+  kelas_092025: "Ust. Ali Wardana S.Pd",
+  kelas_102025: "Ust. Mullah Muhammad Umar",
+  kelas_112025: "Ust. Akhsani Tawqim SE",
+  kelas_122025: "Ust. Ikhsan Nur Khamid",
+  kelas_132025: "Ust. Abdul Haq",
+  kelas_142025: "Ust. Abdullah Al Guspari",
+  kelas_152025: "Ust. Abdullah Rafi",
+  kelas_162025: "Ust. Fajrul Ihsan",
+  kelas_172025: "Ust. Idris",
+  kelas_182025: "Ust. Muhammad Athayya Mumtaz",
+  kelas_192025: "Ust. M. Hanan Azizi",
+  kelas_202025: "Ust. Muhammad Rama Miayasin",
+  kelas_212025: "Ust. Nur Afiq",
+  kelas_222025: "Ust. Raditya Baswara Raharjo",
+  kelas_232025: "Ust. Rafie Zahran Kurniawan",
+  kelas_242025: "Ust. Shidiq Hasan Khan"};
 
   kelasSelect.innerHTML = "";
 
@@ -2917,13 +2947,55 @@ logoutBtn.addEventListener("click", () => {
 
 <!-- ============ ABSENSI FLEX – UTIL & RENDER (global, ringan) ============ -->
 (function(){
+  // Inject style .abs-mini
+  (function ensureAbsMiniStyles(){
+    if (document.getElementById('absmini-green-style')) return;
+    const st = document.createElement('style');
+    st.id = 'absmini-green-style';
+    st.textContent = `
+      .abs-mini{
+        transition: background .2s ease, color .2s ease;
+      }
+      /* Warna default saat 100% (kompat lama) — akan dioverride oleh kelas status */
+      .abs-mini.is-complete{
+        background:#dcfce7; /* hijau muda */
+        color:#065f46;       /* kontras */
+        border-radius:6px;
+        padding:0 .375rem;
+        transition: background .2s ease, color .2s ease;
+      }
+      /* Warna berdasar status dominan */
+      .abs-mini.is-hadir{
+        background:#dcfce7; /* green-100 */
+        color:#065f46;
+        border-radius:6px; padding:0 .375rem;
+      }
+      .abs-mini.is-izin{
+        background:#f3e8ff; /* violet-100 */
+        color:#4c1d95;
+        border-radius:6px; padding:0 .375rem;
+      }
+      .abs-mini.is-sakit{
+        background:#fef9c3; /* yellow-100 */
+        color:#854d0e;
+        border-radius:6px; padding:0 .375rem;
+      }
+      .abs-mini.is-alpha{
+        background:#fee2e2; /* red-200 */
+        color:#7f1d1d;
+        border-radius:6px; padding:0 .375rem;
+      }
+    `;
+    document.head.appendChild(st);
+  })();
+
   // Konfigurasi global yang bisa dioverride sebelum loadSantriData jalan
-  window.ABS_FLEX_CFG = window.ABS_FLEX_CFG || {
+    window.ABS_FLEX_CFG = window.ABS_FLEX_CFG || {
     statuses: ["hadir","izin","sakit","alpha"],
-    perStatus: Number(window.ABS_FLEX_PER_STATUS ?? 1), // default 2 unit per status (hadir1..2, dst)
-    defaultTarget: 1,                                   // default denominator
-    maxTarget: 1,                                       // denominator 1..6
-    labels: null                                        // {hadir:[...], izin:[...], ...] (opsional)
+    perStatus: Number(window.ABS_FLEX_PER_STATUS ?? 1), // ✅ default 2 (Pagi/Sore)
+    defaultTarget: 1,                                   // ✅ bawa default ke 2
+    maxTarget: 1,                                       // ✅ dukung 1..6 sesi aktif
+    labels: null
   };
 
   // --- Tambahan: helper clone aman & di-expose global ---
@@ -2933,6 +3005,23 @@ logoutBtn.addEventListener("click", () => {
       : [];
   }
   window.__absflex_safeCloneItems = safeCloneItems;
+
+  // --- Tambahan: tentukan status dominan & expose global ---
+  function dominantStatus(items){
+    const cnt = {hadir:0, izin:0, sakit:0, alpha:0};
+    (items||[]).forEach(it=>{
+      if (!it?.checked) return;
+      const base = String(it.key||'').toLowerCase().replace(/\d+$/,'');
+      if (base in cnt) cnt[base]++;
+    });
+    // prioritas seri: hadir > izin > sakit > alpha
+    let best=null,max=0;
+    ["hadir","izin","sakit","alpha"].forEach(k=>{
+      if (cnt[k] > max){ max=cnt[k]; best=k; }
+    });
+    return max>0 ? best : null;
+  }
+  window.__absmini_dominantStatus = dominantStatus;
 
   function buildKeys(perStatus = ABS_FLEX_CFG.perStatus){
     const n = Math.max(1, Math.min(6, perStatus|0 || 2));
@@ -2948,22 +3037,14 @@ logoutBtn.addEventListener("click", () => {
     const Title   = st.charAt(0).toUpperCase() + st.slice(1);
     const idx     = i - 1;
     const per     = ABS_FLEX_CFG.perStatus|0;
-    const sesiAll = ["Sesi"];
-
-    // Legacy: jika tetap 2 sesi, pertahankan Pagi/Sore
     if (per === 2){
-      const sesi = (idx === 0) ? "Pagi" : "Sore";
-      return `${Title} ${sesi} ${i}`;
-    }
-
-    // Jika lebih dari 2 sesi, gunakan daftar sesi lengkap
-    if (per > 2){
-      const sesi = sesiAll[idx] || `Sesi ${i}`;
-      return `${Title} ${sesi} ${i}`;
-    }
-
-    // Fallback (perStatus=1)
-    return `${Title} ${i}`;
+	const sesi = (idx === 0) ? "Pagi" : "Sore";
+	return `${Title} ${sesi}`; // ✅ tidak ulang angka
+	}
+	if (per > 2){
+	return `${Title} Sesi ${i}`; // ✅ Sesi 1..N
+	}
+	return `${Title} ${i}`;
   }
 
   function labelFor(st, i){
@@ -3020,6 +3101,45 @@ logoutBtn.addEventListener("click", () => {
     }
     return items;
   }
+
+  // Cari .abs-mini yang se-sel dengan tombol
+  function findAbsMiniFromBtn(btn){
+    if (!btn) return null;
+    const cell = btn.closest('.abs-flex-cell, td, th, .cell, .grid-cell');
+    return (cell && cell.querySelector('.abs-mini'))
+        || btn.querySelector?.('.abs-mini')
+        || btn.parentElement?.querySelector?.('.abs-mini')
+        || null;
+  }
+
+  // Sinkronkan badge .abs-mini
+  function syncAbsMiniFromPercent(percent){
+    const btn = window.__absensiLastButton;
+    if (!btn) return;
+    const mini = findAbsMiniFromBtn(btn);
+    if (!mini) return;
+
+    // Toggle indikator complete (kompat lama)
+    const complete = (percent >= 100);
+    mini.classList.toggle('is-complete', complete);
+
+    // Warna berdasar status dominan dari CELL pemanggil
+    const cell = btn.closest('.abs-flex-cell, td, th, .cell, .grid-cell');
+    const items = Array.isArray(cell?._absensiItems) ? cell._absensiItems : [];
+    const st = dominantStatus(items);
+
+    mini.classList.remove('is-hadir','is-izin','is-sakit','is-alpha');
+    if (st) {
+      mini.classList.add(`is-${st}`);
+    } else {
+      // netral
+      mini.style.background = '';
+      mini.style.color = '';
+      mini.style.borderRadius = '';
+      mini.style.padding = '';
+    }
+  }
+  window.__absmini_sync = syncAbsMiniFromPercent;
 
   // Render widget ke target container (dipakai di MODAL)
   window.renderAbsensiFlex = function renderAbsensiFlex(container, { target=ABS_FLEX_CFG.defaultTarget, presetItems=null } = {}){
@@ -3091,6 +3211,9 @@ logoutBtn.addEventListener("click", () => {
       root._absensiTarget  = rec.target;
       root._absensiChecked = rec.checked;
       root._absensiPercent = Math.round(rec.percent);
+
+      // Sinkronkan badge .abs-mini di sel tombol terkait
+      syncAbsMiniFromPercent(Math.round(rec.percent));
     }
 
     // listeners
@@ -3151,7 +3274,7 @@ logoutBtn.addEventListener("click", () => {
       <div class="absensi-modal-card" style="background:#fff; padding:20px; border-radius:12px; min-width:340px; max-width:90%; max-height:90%; overflow:auto;">
         <div style="display:flex;align-items:center;gap:10px;justify-content:space-between;margin-bottom:10px;">
           <h3 style="margin:0;font-size:18px;"><span id="absensiModalTitleName" style="font-weight:600;"></span></h3>
-          <button id="absensiModalClose" style="padding:6px 10px;border:1px solid #e5e7eb;border-radius:8px;background:#1E88E5;">Tutup</button>
+          <button id="absensiModalClose" style="padding:6px 10px;border:1px solid #e5e7eb;border-radius:8px;background:#1E88E5;color:#fff;">Tutup</button>
         </div>
         <div id="absensiModalContent"></div>
       </div>
@@ -3221,8 +3344,21 @@ logoutBtn.addEventListener("click", () => {
   // Ekspor fungsi publik jika ingin dipanggil dari handler lama Anda
   window.__setAbsensiTitleFromBtn = function(btn){
     window.ensureAbsensiModal && window.ensureAbsensiModal();
+    // simpan tombol terakhir untuk sinkronisasi .abs-mini
+    window.__absensiLastButton = btn;
     const { nis, nama } = extractIdentityFromButton(btn);
     setAbsensiModalTitle(nis, nama);
+
+    // tandai awal jika badge sudah 100%
+    const mini = (function(){
+      const cell = btn.closest('.abs-flex-cell, td, th, .cell, .grid-cell');
+      return (cell && cell.querySelector('.abs-mini')) || null;
+    })();
+    if (mini){
+      const txt = (mini.getAttribute('data-progress') ?? mini.textContent ?? '').trim();
+      const num = parseInt(String(txt).replace('%','').trim(), 10);
+      mini.classList.toggle('is-complete', Number.isFinite(num) && num === 100);
+    }
   };
 
   // Listener global: hanya set judul; tidak membuka modal & tidak render
@@ -3235,8 +3371,6 @@ logoutBtn.addEventListener("click", () => {
 })();
 <!-- ============ ABSENSI FLEX – UTIL & RENDER (global, ringan) ============ -->
 
-
-
 // === Load Santri Data ===
 async function loadSantriData() {
   const kelas   = kelasSelect.value;
@@ -3244,7 +3378,7 @@ async function loadSantriData() {
   overlay.style.display = "flex";
 
   // ===== util jenjang (tetap) =====
-  const JENJANG_MAX = Number(window.JENJANG_MAX ?? 6);
+  const JENJANG_MAX = Number(window.JENJANG_MAX ?? 32);
 
   const parseJenjang = (v) => {
     const m = /^A(\d+)$/.exec(String(v || "").trim());
@@ -3415,7 +3549,7 @@ async function loadSantriData() {
       for (let s = sFrom; s <= sTo; s++) {
         const surah = surahList.find(x => Number(x.id) === s);
         if (!surah) continue;
-        const totalAy = Number(surah.jumlah_ayat || 0);
+        const totalAy = Number(surah.jumlah_ayat || 0); // ✅ FIX
         const startAy = (s === sFrom) ? aFrom : 1;
         const endAy   = (s === sTo)   ? aTo   : totalAy;
 
@@ -3488,15 +3622,19 @@ async function loadSantriData() {
   window.__makeSurahOptions = makeSurahOptions;
 
   // AYAT dropdown bertanda ✓/🟢 — fallback aman bila Tahap 2 belum terpasang
-  function fillAyatOptionsMarked(selectEl, surahId, selectedAyat = "") {
-    if (typeof window.fillAyatOptionsMarked === "function") {
-      window.fillAyatOptionsMarked(selectEl, surahId, selectedAyat);
-      return;
-    }
-    if (!selectEl) return;
-    selectEl.innerHTML = `<option value="">— Ayat —</option>`;
-    if (selectedAyat) selectEl.value = String(selectedAyat);
+function _fillAyatOptionsMarkedLocal(selectEl, surahId, selectedAyat = "") {
+  if (!selectEl) return;
+  selectEl.innerHTML = `<option value="">— Ayat —</option>`;
+  if (selectedAyat) selectEl.value = String(selectedAyat);
+}
+// helper: pilih global jika ada, selain itu pakai lokal
+function callFillAyatOptions(selectEl, surahId, selectedAyat=""){
+  if (typeof window.fillAyatOptionsMarked === "function") {
+    window.fillAyatOptionsMarked(selectEl, surahId, selectedAyat);
+  } else {
+    _fillAyatOptionsMarkedLocal(selectEl, surahId, selectedAyat);
   }
+}
 
   try {
     // MASTER santri
@@ -3683,12 +3821,38 @@ async function loadSantriData() {
           <td class="col-nama">${santri.nama ?? ""}${subTanggal}</td>
           <td>
             <select class="jenjang">
-    <option value="A1" ${jenNow === 'A1' ? 'selected' : ''}>1 PDF</option>
-    <option value="A2" ${jenNow === 'A2' ? 'selected' : ''}>2 PDF</option>
-    <option value="A3" ${jenNow === 'A3' ? 'selected' : ''}>3 PDF</option>
-    <option value="A4" ${jenNow === 'A4' ? 'selected' : ''}>1 MA</option>
-    <option value="A5" ${jenNow === 'A5' ? 'selected' : ''}>2 MA</option>
-    <option value="A6" ${jenNow === 'A6' ? 'selected' : ''}>3 MA</option>
+    <option value="A1" ${jenNow === 'A1' ? 'selected' : ''}>ILA</option>
+    <option value="A2" ${jenNow === 'A2' ? 'selected' : ''}>ILB</option>
+    <option value="A3" ${jenNow === 'A3' ? 'selected' : ''}>ILC</option>
+    <option value="A4" ${jenNow === 'A4' ? 'selected' : ''}>ILD</option>
+    <option value="A5" ${jenNow === 'A5' ? 'selected' : ''}>1A IM</option>
+    <option value="A6" ${jenNow === 'A6' ? 'selected' : ''}>1B IM</option>
+    <option value="A7" ${jenNow === 'A7' ? 'selected' : ''}>1C IM</option>
+    <option value="A8" ${jenNow === 'A8' ? 'selected' : ''}>1D IM</option>
+    <option value="A9" ${jenNow === 'A9' ? 'selected' : ''}>1E IM</option>
+    <option value="A10" ${jenNow === 'A10' ? 'selected' : ''}>1F IM</option>
+    <option value="A11" ${jenNow === 'A11' ? 'selected' : ''}>1G IM</option>
+    <option value="A12" ${jenNow === 'A12' ? 'selected' : ''}>1H IM</option>
+    <option value="A13" ${jenNow === 'A13' ? 'selected' : ''}>1I IM</option>
+    <option value="A14" ${jenNow === 'A14' ? 'selected' : ''}>1J IM</option>
+    <option value="A15" ${jenNow === 'A15' ? 'selected' : ''}>2A IM</option>
+    <option value="A16" ${jenNow === 'A16' ? 'selected' : ''}>2B IM</option>
+    <option value="A17" ${jenNow === 'A17' ? 'selected' : ''}>2C IM</option>
+    <option value="A18" ${jenNow === 'A18' ? 'selected' : ''}>2D IM</option>
+    <option value="A19" ${jenNow === 'A19' ? 'selected' : ''}>2E IM</option>
+    <option value="A20" ${jenNow === 'A20' ? 'selected' : ''}>2F IM</option>
+    <option value="A21" ${jenNow === 'A21' ? 'selected' : ''}>2G IM</option>
+    <option value="A22" ${jenNow === 'A22' ? 'selected' : ''}>2H IM</option>
+    <option value="A23" ${jenNow === 'A23' ? 'selected' : ''}>2I IM</option>
+    <option value="A24" ${jenNow === 'A24' ? 'selected' : ''}>3A IM</option>
+    <option value="A25" ${jenNow === 'A25' ? 'selected' : ''}>3B IM</option>
+    <option value="A26" ${jenNow === 'A26' ? 'selected' : ''}>3C IM</option>
+    <option value="A27" ${jenNow === 'A27' ? 'selected' : ''}>3D IM</option>
+    <option value="A28" ${jenNow === 'A28' ? 'selected' : ''}>3E IM</option>
+    <option value="A29" ${jenNow === 'A29' ? 'selected' : ''}>3F IM</option>
+    <option value="A30" ${jenNow === 'A30' ? 'selected' : ''}>3G IM</option>
+    <option value="A31" ${jenNow === 'A31' ? 'selected' : ''}>3H IM</option>
+    <option value="A32" ${jenNow === 'A32' ? 'selected' : ''}>3I IM</option>
   </select>
           </td>
           <td>
@@ -3713,7 +3877,6 @@ async function loadSantriData() {
     <option value="" ${!ketNow ? 'selected' : ''}></option>
     <option value="SP1" ${ketNow === 'SP1' ? 'selected' : ''}>SP1</option>
     <option value="SP2" ${ketNow === 'SP2' ? 'selected' : ''}>SP2</option>
-    <option value="SP3" ${ketNow === 'SP3' ? 'selected' : ''}>SP3</option>
   </select>
           </td>
           <td>
@@ -3771,8 +3934,8 @@ async function loadSantriData() {
         if (dariArr[0])   surahDari.value   = dariArr[0];
         if (sampaiArr[0]) surahSampai.value = sampaiArr[0];
 
-        fillAyatOptionsMarked(ayatDari,   surahDari.value || "",   dariArr[1]   || "");
-        fillAyatOptionsMarked(ayatSampai, surahSampai.value || "", sampaiArr[1] || "");
+        callFillAyatOptions(ayatDari,   surahDari.value || "",   dariArr[1]   || "");
+		callFillAyatOptions(ayatSampai, surahSampai.value || "", sampaiArr[1] || "");
 
         if (dataAbsensi?.tilawahTotalJuz) {
           const tj = Number(dataAbsensi.tilawahTotalJuz);
@@ -3793,11 +3956,11 @@ async function loadSantriData() {
 
         surahDari.addEventListener("change", () => {
           rebuildSurahDari();
-          fillAyatOptionsMarked(ayatDari, surahDari.value || "", "");
+          callFillAyatOptions(ayatDari, surahDari.value || "", "");
           if (surahDari.value) {
             surahSampai.value = surahDari.value;
             rebuildSurahSampai();
-            fillAyatOptionsMarked(ayatSampai, surahSampai.value || "", "");
+            callFillAyatOptions(ayatSampai, surahSampai.value || "", "");
             ayatSampai.value = ayatDari.value || "";
           } else {
             surahSampai.value = "";
@@ -3809,7 +3972,7 @@ async function loadSantriData() {
 
         surahSampai.addEventListener("change", () => {
           rebuildSurahSampai();
-          fillAyatOptionsMarked(ayatSampai, surahSampai.value || "", "");
+          callFillAyatOptions(ayatSampai, surahSampai.value || "", "");
           updateTotalJuz(row);
         });
 
@@ -3943,8 +4106,30 @@ async function loadSantriData() {
           cell._absensiPercent = comp.percent;
 
           function updateMini(){
+            // teks + atribut bantu
             mini.textContent = `${cell._absensiPercent}% (${cell._absensiChecked}/${cell._absensiTarget})`;
+            mini.setAttribute('data-progress', String(cell._absensiPercent));
+
+            // indikator complete (kompat lama)
+            const complete = Number(cell._absensiPercent) >= 100;
+            mini.classList.toggle('is-complete', complete);
+
+            // warna berdasar status dominan
+            const st = (typeof window.__absmini_dominantStatus==='function')
+              ? window.__absmini_dominantStatus(cell._absensiItems)
+              : null;
+
+            mini.classList.remove('is-hadir','is-izin','is-sakit','is-alpha');
+            if (st) {
+              mini.classList.add(`is-${st}`);
+            } else {
+              mini.style.background = '';
+              mini.style.color = '';
+              mini.style.borderRadius = '';
+              mini.style.padding = '';
+            }
           }
+
           updateMini();
 
           btn.addEventListener("click", () => {
@@ -3987,7 +4172,7 @@ async function loadSantriData() {
 
   overlay.style.display = "none";
 }
-
+	
 
 // ====== Dropdown Ayat (OWNER-AWARE): ayat terpakai disembunyikan KECUALI jika baris ini adalah owner-nya ======
 // ====== Dropdown Ayat (OWNER-AWARE + RENTANG OWNER TETAP TAMPIL) ======
@@ -4550,6 +4735,7 @@ async function simpanDataMutabaah(saveBtn){
       });
 
       const res=await fetch('/api/saveData',{
+// ... (tidak berubah)
         method:'POST',
         credentials:'include',
         headers:{'Content-Type':'application/json','Accept':'application/json'},
@@ -4601,7 +4787,7 @@ async function simpanDataMutabaah(saveBtn){
           for (let s = Number(sFrom); s <= Number(sTo); s++) {
             const surah = surahList.find(x => Number(x.id) === s);
             if (!surah) continue;
-            const totalAy = Number(surah.jumlah_ayat || 0);
+            const totalAy = Number(surah.jumlah_ayat || 0); // ✅ FIX
             const startAy = (s === Number(sFrom)) ? Number(aFrom) : 1;
             const endAy   = (s === Number(sTo))   ? Number(aTo)   : totalAy;
 
@@ -4694,9 +4880,34 @@ async function simpanDataMutabaah(saveBtn){
 document.getElementById('save-btn')?.addEventListener('click', function(){ simpanDataMutabaah(this); });
 document.getElementById('save-btn-modal')?.addEventListener('click', function(){ simpanDataMutabaah(this); });
 document.getElementById('mur-save')?.addEventListener('click', function(){ simpanDataMutabaah(this); });
-// ============================
-// A. LOAD SANTRI DATA
-// ============================	 
+
+// re-sync badge .abs-mini semua baris setelah simpan (tambahkan warna status dominan)
+document.querySelectorAll('#santri-table tbody tr .abs-flex-cell').forEach(cell=>{
+  const mini = cell.querySelector('.abs-mini');
+  if (!mini) return;
+  const percent = Number(cell._absensiPercent || 0);
+  mini.textContent = `${percent}% (${Number(cell._absensiChecked||0)}/${Number(cell._absensiTarget||0)})`;
+  mini.setAttribute('data-progress', String(percent));
+
+  // kompat lama: tanda complete
+  const complete = percent >= 100;
+  mini.classList.toggle('is-complete', complete);
+
+  // warna dominan
+  const st = (typeof window.__absmini_dominantStatus==='function')
+    ? window.__absmini_dominantStatus(cell._absensiItems)
+    : null;
+
+  mini.classList.remove('is-hadir','is-izin','is-sakit','is-alpha');
+  if (st) {
+    mini.classList.add(`is-${st}`);
+  } else {
+    mini.style.background = '';
+    mini.style.color = '';
+    mini.style.borderRadius = '';
+    mini.style.padding = '';
+  }
+});
 
 // ============================
 // A. LOAD SANTRI DATA
@@ -5045,26 +5256,30 @@ function keteranganDisplayForKey(key, fallback){
   // === Helper Kelas/Kelompok ===
 function buildKelasKelompokLine(kelas, kelasEl) {
   const kelasNum = (String(kelas||'').match(/(\d+)/)?.[1]) || (kelas || '-');
-  const custom = window.namaKelasCustom || window.NAMA_KELAS_CUSTOM || {  kelas_012526: "Ustadzah Lylika Tri Canda Medita",
-  kelas_022526: "Ustadzah Dewi Khumariah Rhasya",
-  kelas_032526: "Ustadzah Nadia Nurfadhilah",
-  kelas_042526: "Ustadzah Eliya",
-  kelas_052526: "Ustadzah Rima Karimah",
-  kelas_062526: "Ustadzah Rishana Hanifa",
-  kelas_072526: "Ustadzah Karimah",
-  kelas_082526: "Ustadzah Nurfadhilah Kamaliyah",
-  kelas_092526: "Ustadzah Umi Muthoharoh",
-  kelas_102526: "Ustadzah Sofi Agnia",
-  kelas_112526: "Ustadzah Ririn Nurialy",
-  kelas_122526: "Ustadzah Zihan Audrian Hidayat",
-  kelas_132526: "Ustadzah Nopia",
-  kelas_142526: "Ustadz Imam Tolhah",
-  kelas_152526: "Ustadz Fahri Aziz",
-  kelas_162526: "Ustadz Saeful Munawar Rizal",
-  kelas_172526: "Ustadz Aflah Musoddaq",
-  kelas_182526: "Ustadz Saif Abdullah",
-  kelas_192526: "Ustadz Muhammad Farhan Hidayat",
-  kelas_202526: "Ustadz Farrid Ilallah"};
+  const custom = window.namaKelasCustom || window.NAMA_KELAS_CUSTOM || {  kelas_012025: "Ust. Tukimin Abu Rasyid BA",
+  kelas_022025: "Ust. Dicky Miswardi BA",
+  kelas_032025: "Ust. Jundullah BA",
+  kelas_042025: "Ust. Abdullah",
+  kelas_052025: "Ust. Ro'uuf Noor Huda Su'udin S.Pd",
+  kelas_062025: "Ust. Salahuddin Santoaji S.T.P",
+  kelas_072025: "Ust. Hammam Ahmed Saleh",
+  kelas_082025: "Ust. Alif Rafiqul",
+  kelas_092025: "Ust. Ali Wardana S.Pd",
+  kelas_102025: "Ust. Mullah Muhammad Umar",
+  kelas_112025: "Ust. Akhsani Tawqim SE",
+  kelas_122025: "Ust. Ikhsan Nur Khamid",
+  kelas_132025: "Ust. Abdul Haq",
+  kelas_142025: "Ust. Abdullah Al Guspari",
+  kelas_152025: "Ust. Abdullah Rafi",
+  kelas_162025: "Ust. Fajriul Ihsan",
+  kelas_172025: "Ust. Idris",
+  kelas_182025: "Ust. Muhammad Athayya Mumtaz",
+  kelas_192025: "Ust. M. Hanan Azili",
+  kelas_202025: "Ust. Muhammad Rama Miayasin",
+  kelas_212025: "Ust. Nur Afiq",
+  kelas_222025: "Ust. Raditya Baswara Raharjo",
+  kelas_232025: "Ust. Rafie Zahran Kurniawan",
+  kelas_242025: "Ust. Shidiq Hasan Khan"};
     let kelompok = custom[kelas] || "";
     if (!kelompok) {
       const optText = kelasEl?.options?.[kelasEl.selectedIndex]?.text?.trim() || "";
@@ -9853,7 +10068,7 @@ function renderSessionHTML(s){
 
 <script>
   // ====== KONFIG (opsional dari window.*) ======
-  const JENJANG_MAX = Number(window.JENJANG_MAX ?? 6);             // 34 default; 0 = tanpa batas atas
+  const JENJANG_MAX = Number(window.JENJANG_MAX ?? 32);             // 34 default; 0 = tanpa batas atas
   const JENJANG_SAFETY_CAP = Number(window.JENJANG_SAFETY_CAP ?? 1000); // darurat bila tanpa batas
 
   // ====== Helper jenjang dinamis ======
@@ -13122,7 +13337,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     <!-- Loader di dalam modal -->
     <div id="paLoading" class="pa-loading" aria-hidden="true">
-      <img src="https://raw.githubusercontent.com/digitalmtq/web/main/gear.gif">
+      <img src="https://raw.githubusercontent.com/raportahfiz/web/main/gear.gif">
     </div>
   </div>
 </div>
@@ -13706,7 +13921,6 @@ document.addEventListener("DOMContentLoaded", () => {
   }catch(e){}
 })();
 </script>
-
 		
 </body>
 </html>
