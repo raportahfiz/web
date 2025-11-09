@@ -5196,6 +5196,10 @@ function keteranganDisplayForKey(key, fallback){
   if (f && (f.text || f.value)) return f.text || f.value;
   return (fallback!=null && String(fallback).trim()!=='') ? String(fallback) : '-';
 }
+
+// === expose ke global supaya pdfSantriDownload di luar IIFE bisa pakai ===
+window.semesterDisplayForKey = semesterDisplayForKey;
+window.keteranganDisplayForKey = keteranganDisplayForKey;
 	
 
   // === Helper Kelas/Kelompok ===
@@ -7150,6 +7154,9 @@ if (indBtn && !indBtn.dataset.listenerAttached) {
   }
 })(); // end IIFE
 
+var semesterDisplayForKey = window.semesterDisplayForKey || function(key, fb){ return fb ?? '-'; };
+var keteranganDisplayForKey = window.keteranganDisplayForKey || function(key, fb){ return fb ?? '-'; };
+
 	 // === [FIX-1] Global fmtMurRange (agar bisa dipakai di semua blok) ===
 if (typeof window.fmtMurRange !== 'function') {
   window.fmtMurRange = function(total, count){
@@ -7194,31 +7201,41 @@ async function pdfSantriDownload(){
     const { startDate, endDate, kelasLine, rows: aggRows, allDataNorm } = await collectRekapData();
 
 	// === Range efektif (pakai Absensi jika toggle aktif) ===
-const { start: absS, end: absE, source: absSrc } =
-  (typeof getAbsensiRangeOrDefault === 'function')
-    ? getAbsensiRangeOrDefault()
-    : { start: startDate, end: endDate, source: 'global' };
+  const { start: absS, end: absE, source: absSrc } =
+    (typeof getAbsensiRangeOrDefault === 'function')
+      ? getAbsensiRangeOrDefault()
+      : { start: startDate, end: endDate, source: 'global' };
 
-const usingAbsensiRange = (absSrc === 'absensi');
-const effStart = usingAbsensiRange ? absS : startDate;
-const effEnd   = usingAbsensiRange ? absE : endDate;
+  const usingAbsensiRange = (absSrc === 'absensi');
+  const effStart = usingAbsensiRange ? absS : startDate;
+  const effEnd   = usingAbsensiRange ? absE : endDate;
 
-// === Keterangan terakhir (per-santri, rentang efektif)
-const sortedMine = [...mine].sort((a,b)=> String(a?.tanggal||'').localeCompare(String(b?.tanggal||'')));
-let keteranganLive = '-';
-for (const it of sortedMine) {
-  const ket = (it?.keterangan ?? it?.note ?? it?.catatan ?? '').toString().trim();
-  if (ket) keteranganLive = ket; // overwrite sampai entri terakhir
-}
+  // === Data santri terpilih (filter dulu dari allDataNorm) ===
+  let mine = (allDataNorm || []).filter(it =>
+    String(it.nis || it.id || '') === key
+  );
 
-    let mine = allDataNorm.filter(it => (String(it.nis||it.id||'') === key));
-if (usingAbsensiRange) {
-  mine = mine.filter(it => {
-    const t = String(it?.tanggal || '');
-    return t >= effStart && t <= effEnd;
-  });
-}
-    if (!mine.length) throw new Error('Tidak ada data untuk santri terpilih pada rentang tanggal.');
+  if (usingAbsensiRange) {
+    mine = mine.filter(it => {
+      const t = String(it?.tanggal || '');
+      return t >= effStart && t <= effEnd;
+    });
+  }
+
+  if (!mine.length) {
+    throw new Error('Tidak ada data untuk santri terpilih pada rentang tanggal.');
+  }
+
+  // === Keterangan terakhir (per-santri, dalam rentang efektif) ===
+  const sortedMine = [...mine].sort((a, b) =>
+    String(a?.tanggal || '').localeCompare(String(b?.tanggal || ''))
+  );
+
+  let keteranganLive = '-';
+  for (const it of sortedMine) {
+    const ket = (it?.keterangan ?? it?.note ?? it?.catatan ?? '').toString().trim();
+    if (ket) keteranganLive = ket;
+  }
 
     // --- dapatkan helper override UI (fallback ke no-op bila belum ada) ---
 const _getSelectedSemester   = (window.getSelectedSemester   || (() => null));
