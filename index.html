@@ -5106,6 +5106,35 @@ function _isMeaningfulKBM(rec){
     return map;
   }
 
+// ====== Agregasi "hari hadir" per santri (slot-based) ======
+function _aggregateHadirDaysPerKey(items){
+  // key -> Set(tanggal_hadir)
+  const map = new Map();
+  for (const r of (items || [])) {
+    const key = (r?.nis && String(r.nis).trim()) || (r?.id && String(r.id).trim());
+    const tgl = r?.tanggal ? String(r.tanggal).slice(0,10) : '';
+    if (!key || !tgl) continue;
+
+    // slot-based: minimal 1 slot 'hadir' di hari tsb
+    const sc = r?._slotCounts;
+    const hadHadirSlot = sc ? Number(sc.hadir||0) > 0 : false;
+
+    // fallback: kalau tidak ada slot, pakai field absensi/status
+    const st = (!sc) ? PDF_normStatus(r?.absensi ?? r?.status) : null;
+    const hadHadirNonSlot = (!sc) && (st === 'hadir');
+
+    if (hadHadirSlot || hadHadirNonSlot) {
+      if (!map.has(key)) map.set(key, new Set());
+      map.get(key).add(tgl);
+    }
+  }
+  const out = new Map();
+  for (const [k, set] of map.entries()){
+    out.set(k, { hadirDays: set.size });
+  }
+  return out;
+}
+
 // --- Helper aman ambil nilai kelas ---
 function getSelectedKelas(){
   const el = (typeof kelasSelect !== 'undefined' && kelasSelect)
@@ -5571,6 +5600,13 @@ for (const it of _sortedAbsensi){
     aggMap[k].targetSlots = a.target;
   }
 
+// 6b) Hari hadir per santri (slot-based) → untuk Hadir % berbasis HARI KBM
+const hadirDayAgg = _aggregateHadirDaysPerKey(allDataAbsensi);
+for (const [k, v] of hadirDayAgg.entries()){
+  if (!aggMap[k]) continue;
+  aggMap[k].hadirDays = v.hadirDays; // jumlah HARI hadir santri
+}
+
 // --- META LIVE ke agregat (semester/jenjang dari roster, keterangan dari absensi terfilter) ---
 for (const k of Object.keys(aggMap)) {
   const r = aggMap[k];
@@ -5901,11 +5937,16 @@ window.PDF_joinRangeSegmentsCompact = PDF_joinRangeSegmentsCompact;
         const sakitSlots = Number(r.sakitSlots ?? r.sakit ?? 0);
         const alphaSlots = Number(r.alphaSlots ?? r.alpha ?? 0);
         const targetSlots= Number(r.targetSlots ?? 0);
-        const denomSlots = hadirSlots + izinSlots + sakitSlots + alphaSlots;
-		// Utamakan targetSlots agar 1 hadir dari 4 = 25%
-		const hadirPct = (targetSlots > 0)
-  		? Math.round((hadirSlots / targetSlots) * 100)
-  		: (denomSlots > 0 ? Math.round((hadirSlots / denomSlots) * 100) : 0);
+        // === Hadir % berbasis HARI KBM ===
+const hadirDays = Number(r.hadirDays || 0);
+const denomDays = Number(kbmDays || 0);
+const hadirPct  = denomDays > 0
+  ? Math.round(100 * hadirDays / denomDays)
+  : (
+      (hadirSlots + izinSlots + sakitSlots + alphaSlots) > 0
+      ? Math.round(100 * hadirirSlots / (hadirSlots + izinSlots + sakitSlots + alphaSlots))
+      : (targetSlots > 0 ? Math.round(100 * hadirSlots / targetSlots) : 0)
+    );
 
         return {
           no: String(idx+1),
@@ -6276,6 +6317,13 @@ for (const it of _sortedAbsensi){
     aggMap[k].targetSlots = a.target;
   }
 
+// 6b) Hari hadir per santri (slot-based) → Hadir % berbasis HARI pada PDF All Kelas
+const hadirDayAgg = _aggregateHadirDaysPerKey(allDataAbsensi);
+for (const [k, v] of hadirDayAgg.entries()){
+  if (!aggMap[k]) continue;
+  aggMap[k].hadirDays = v.hadirDays;
+}
+
   // --- META LIVE ke agregat (semester/jenjang roster, keterangan dari absensi terfilter) ---
 for (const k of Object.keys(aggMap)) {
   const r = aggMap[k];
@@ -6443,10 +6491,16 @@ for (const k of Object.keys(aggMap)) {
           const sakitSlots = Number(r.sakitSlots ?? r.sakit ?? 0);
           const alphaSlots = Number(r.alphaSlots ?? r.alpha ?? 0);
           const targetSlots= Number(r.targetSlots ?? 0);
-          const denomSlots = hadirSlots + izinSlots + sakitSlots + alphaSlots;
-		  const hadirPct = (targetSlots > 0)
-  		  ? Math.round((hadirSlots / targetSlots) * 100)
-  	  	  : (denomSlots > 0 ? Math.round((hadirSlots / denomSlots) * 100) : 0);
+          // === Hadir % berbasis HARI KBM per kelas ===
+const hadirDays = Number(r.hadirDays || 0);
+const denomDays = Number(kbmDays || 0);
+const hadirPct  = denomDays > 0
+  ? Math.round(100 * hadirDays / denomDays)
+  : (
+      (hadirSlots + izinSlots + sakitSlots + alphaSlots) > 0
+      ? Math.round(100 * hadirSlots / (hadirSlots + izinSlots + sakitSlots + alphaSlots))
+      : (targetSlots > 0 ? Math.round(100 * hadirSlots / targetSlots) : 0)
+    );
 
 
           return {
@@ -6672,7 +6726,12 @@ async function xlsRekapDownload(){
         const sakitSlots = Number(r.sakitSlots ?? r.sakit ?? 0);
         const alphaSlots = Number(r.alphaSlots ?? r.alpha ?? 0);
         const targetSlots= Number(r.targetSlots ?? 0);
-        const hadirPct   = targetSlots > 0 ? Math.round((hadirSlots / targetSlots) * 100) : 0;
+        // === Hadir % berbasis HARI KBM ===
+const hadirDays = Number(r.hadirDays || 0);
+const denomDays = Number(kbmDays || 0);
+const hadirPct  = denomDays > 0
+  ? Math.round(100 * hadirDays / denomDays)
+  : (targetSlots > 0 ? Math.round(100 * hadirSlots / targetSlots) : 0);
 
         return [
           idx+1,
@@ -7198,7 +7257,7 @@ async function pdfSantriDownload(){
     const key = sel.value;
     const selectedNama = sel.options[sel.selectedIndex]?.dataset?.nama || '';
 
-    const { startDate, endDate, kelasLine, rows: aggRows, allDataNorm } = await collectRekapData();
+    const { startDate, endDate, kelasLine, rows: aggRows, allDataNorm, kbmDays } = await collectRekapData();
 
 	// === Range efektif (pakai Absensi jika toggle aktif) ===
   const { start: absS, end: absE, source: absSrc } =
@@ -7400,11 +7459,20 @@ const jenjangSantriLabel = jenjangLabel(jenjangSantri || '');
 	: null;
     const statusJuzTotal = PDF_totalAllJuzStatus(totJuz, agg?.semester ?? semesterSantri);
 
-    // Persentase kehadiran total (slot-based)
-    const denomTotal = totH + totI + totS + totA;
-	const hadirPctTotal = (totalTargetSlots > 0)
-    ? Math.round((totH / totalTargetSlots) * 100)
-    : (denomTotal > 0 ? Math.round((totH / denomTotal) * 100) : 0);
+	 // total hari hadir santri (≥1 slot hadir dalam 1 hari)
+const hadirDaysSantri = dayRows.reduce(
+  (s,d) => s + (Number(d.cnt?.hadir || 0) > 0 ? 1 : 0), 0
+);
+
+    // Persentase kehadiran total (berdasar HARI KBM)
+const denomDaysTotal = Number(kbmDays || 0);
+const hadirPctTotal  = denomDaysTotal > 0
+  ? Math.round(100 * hadirDaysSantri / denomDaysTotal)
+  : (
+      (totH + totI + totS + totA) > 0
+      ? Math.round(100 * totH / (totH + totI + totS + totA))
+      : (totalTargetSlots > 0 ? Math.round(100 * totH / totalTargetSlots) : 0)
+    );
 
     // ==== Baris harian (slot-based) ====
     const tableRows = dayRows.map((d, idx) => {
