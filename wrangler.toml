@@ -3,5 +3,5 @@ compatibility_date = "2024-11-01"
 
 [[d1_databases]]
 binding = "ABSENSI_DB"
-database_name = "absensi-db"
+database_name = "absensi-db2"
 database_id = "<uuid-d1>"
