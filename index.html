@@ -1798,7 +1798,7 @@ function extendSemesterOptions(selectEl, max = SEMESTER_MAX) {
 
     <!-- Baris aksi nilai + tombol rekam -->
 <div class="manual-actions" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-  <input type="number" id="input-nilai-manual" min="0" max="100" step="0.1" style="width:90px;" placeholder="Nilai Manual">
+  <input type="number" id="input-nilai-manual" min="0" max="400" step="0.1" style="width:90px;" placeholder="Nilai Manual">
   <button id="btn-beri-nilai">Acc</button>
   <button id="btn-reset-nilai" title="Kosongkan nilai & hapus di server">Reset</button>
   <button id="btn-open-record">Recording</button>
@@ -1982,39 +1982,52 @@ function ambilDariStorage() {
   markData = saved ? JSON.parse(saved) : {};
 }
 
-/* ========= HITUNG NILAI ========= */
+
+<!-- ========= HITUNG NILAI ========= -->
 function hitungNilai() {
   let totalMinus = 0, hijau = 0, kuning = 0, merah = 0, adaMark = false;
+
   for (let ayat in markData) {
     if (ayat === 'audio') continue; // abaikan daftar audio
     for (let idx in markData[ayat]) {
-      const mark = markData[ayat][idx]; if (!mark) continue;
+      const mark = markData[ayat][idx];
+      if (!mark) continue;
       adaMark = true;
-      if (mark === "green") { totalMinus += 0.5; hijau++; }
-      else if (mark === "yellow") { totalMinus += 1; kuning++; }
-      else if (mark === "red") { totalMinus += 2; merah++; }
+      if (mark === "green") { totalMinus += 0.1; hijau++; }
+      else if (mark === "yellow") { totalMinus += 0.2; kuning++; }
+      else if (mark === "red") { totalMinus += 0.3; merah++; }
     }
   }
-  let nilai = adaMark ? Math.max(0, 100 - totalMinus) : 0;
+
+  // Maksimal 40
+  let nilai = adaMark ? Math.max(0, 40 - totalMinus) : 0;
+
+  // Ambang predikat skala 40 (diproporsikan dari skala 100)
   const predikatMap = [
-    { max: 59, text: "ROSIB", huruf: "D" },
-    { max: 69, text: "MAQBUL", huruf: "C" },
-    { max: 79, text: "JAYYID", huruf: "B" },
-    { max: 89, text: "JAYYID JIDDAN", huruf: "A" },
-    { max: 100, text: "MUMTAZ PLUS", huruf: "A" }
+    { max: 24, text: "ROSIB", huruf: "D" },          // <= 59% dari 40
+    { max: 28, text: "MAQBUL", huruf: "C" },         // <= 69%
+    { max: 32, text: "JAYYID", huruf: "B" },         // <= 79%
+    { max: 36, text: "JAYYID JIDDAN", huruf: "A" },  // <= 89%
+    { max: 40, text: "MUMTAZ PLUS", huruf: "A" }     // <= 100%
   ];
+
   let predikat = "-";
   if (adaMark) {
     const p = predikatMap.find(p => nilai <= p.max);
     const warna = { A: "green", B: "blue", C: "orange", D: "red" };
-    predikat = `${p.text} <span style="background-color:${warna[p.huruf]};color:white;padding:0 4px;border-radius:3px;">${p.huruf}</span>`;
+    if (p) {
+      predikat = `${p.text} <span style="background-color:${warna[p.huruf]};color:white;padding:0 4px;border-radius:3px;">${p.huruf}</span>`;
+    }
   }
+
   const nilaiEl = document.getElementById("nilai-akhir");
   const predikatEl = document.getElementById("predikat-akhir");
   if (nilaiEl) nilaiEl.innerText = nilai.toFixed(1);
   if (predikatEl) predikatEl.innerHTML = predikat;
+
   const warnaDiv = document.getElementById("modal-mark-warna");
   if (warnaDiv) warnaDiv.innerHTML = `🟩 ${hijau} &nbsp; 🟨 ${kuning} &nbsp; 🟥 ${merah}`;
+
   return { nilai, predikat, hijau, kuning, merah };
 }
 
@@ -2022,13 +2035,16 @@ function hitungNilai() {
 document.getElementById("btn-beri-nilai").onclick = function() {
   if (!currentIdSiswa) return alert("Klik 'Lembar Penilaian' dulu.");
   const v = parseFloat(document.getElementById("input-nilai-manual").value);
-  if (isNaN(v) || v < 0 || v > 100) return alert("Masukkan Nilai Manual dari 0 sampai 100.");
 
+  // Validasi 0..40
+  if (isNaN(v) || v < 0 || v > 40) return alert("Masukkan Nilai Manual dari 0 sampai 40.");
+
+  // Predikat skala 40
   let pred = "-";
-  if (v <= 59) pred = "ROSIB (D)";
-  else if (v <= 69) pred = "MAQBUL (C)";
-  else if (v <= 79) pred = "JAYYID (B)";
-  else if (v <= 89) pred = "JAYYID JIDDAN (A)";
+  if (v <= 24) pred = "ROSIB (D)";
+  else if (v <= 28) pred = "MAQBUL (C)";
+  else if (v <= 32) pred = "JAYYID (B)";
+  else if (v <= 36) pred = "JAYYID JIDDAN (A)";
   else pred = "MUMTAZ PLUS (A)";
 
   // Nilai manual tidak menghapus audio
@@ -2048,6 +2064,7 @@ document.getElementById("btn-beri-nilai").onclick = function() {
     if (cell) delete cell.dataset.resetNilai;
   }
 };
+
 
 /* ========= TOMBOL RESET NILAI ========= */
 document.getElementById("btn-reset-nilai").onclick = function () {
