@@ -8176,14 +8176,14 @@ kelasSelect?.addEventListener("change", () => loadSantriData());
 
   // Predikat
   const PREDIKATS = [
-    { max: 59,  text: 'ROSIB',         huruf: 'D'  },
-    { max: 69,  text: 'MAQBUL',        huruf: 'C'  },
-    { max: 79,  text: 'JAYYID',        huruf: 'B'  },
-    { max: 89,  text: 'JAYYID JIDDAN', huruf: 'A'  },
-    { max: 100, text:'MUMTAZ',         huruf: 'A+' },
+    { max: 35,  text: 'ROSIB',         huruf: 'D'  },
+    { max: 41,  text: 'MAQBUL',        huruf: 'C'  },
+    { max: 47,  text: 'JAYYID',        huruf: 'B'  },
+    { max: 53,  text: 'JAYYID JIDDAN', huruf: 'A'  },
+    { max: 60, text:'MUMTAZ',         huruf: 'A+' },
   ];
   function getPredikat(score){
-  const s = Math.max(0, Math.min(100, Number(score)||0));
+  const s = Math.max(0, Math.min(60, Number(score)||0));
   if (s === 0) return null;              // 0 = tidak ada predikat
   return PREDIKATS.find(p=>s<=p.max) || PREDIKATS[PREDIKATS.length-1];
 }
@@ -8398,7 +8398,7 @@ function juzOfAyah(s,a){
     return;
   }
 
-  const sc = Math.max(0, Math.min(100, parseInt(raw, 10) || 0));
+  const sc = Math.max(0, Math.min(60, parseInt(raw, 10) || 0));
 
   // Khusus skor 0 → tidak ada predikat
   if (sc === 0){
@@ -8937,7 +8937,7 @@ const scCand = (scFromDs !== undefined && scFromDs !== '') ? Number(scFromDs)
 
 // HANYA prefill jika angka valid DAN > 0
 if (Number.isFinite(scCand) && scCand > 0) {
-  const s = Math.max(0, Math.min(100, Math.floor(scCand)));
+  const s = Math.max(0, Math.min(60, Math.floor(scCand)));
   const p = getPredikat(s);
   const inp = $(`#mur${i}-score`);
   if (inp) inp.value = String(s);
@@ -9533,7 +9533,7 @@ if (window.currentRowEl){
         else if (rec?.semester) semester = Number(rec.semester||1);
         const target = BATAS[semester]||0;
 
-        const pct = v => { if(!target) return 0; let p=Math.floor((v/target)*100); if(p<0)p=0; return p; };
+        const pct = v => { if(!target) return 0; let p=Math.floor((v/target)*60); if(p<0)p=0; return p; };
         const p1=pct(s1), p2=pct(s2), p3=pct(s3);
         const pSum = p1 + p2 + p3;
 
@@ -9681,7 +9681,7 @@ var btnStyle = btnEnabled
     try { await hitungTotalMurRangeFromTable(); }
     finally { runningCalc = false; }
   }
-  const scheduleRecalcMurRangeDebounced = debounce(scheduleRecalcMurRange, 100);
+  const scheduleRecalcMurRangeDebounced = debounce(scheduleRecalcMurRange, 60);
 
   function watchTableBody(){
     const table = getSantriTable();
@@ -9843,7 +9843,7 @@ function predStyle(p){
 
 // Fallback: konversi skor → huruf (kalau pHuruf kosong)
 function hurufFromScore(sc){
-  var s = Math.max(0, Math.min(100, Math.floor(Number(sc)||0)));
+  var s = Math.max(0, Math.min(60, Math.floor(Number(sc)||0)));
   if (s === 0) return '';          // 0 = tidak ada predikat
   if (s <= 59) return 'D';
   if (s <= 69) return 'C';
