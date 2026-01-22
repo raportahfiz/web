@@ -2823,6 +2823,24 @@ loginForm.addEventListener("submit", async (e) => {
   overlay.style.display = "none";
 });
 
+	 
+function getUserLogin() {
+  const username = localStorage.getItem("username");
+  if (!username) return null;
+
+  let kelas = [];
+  let nis = [];
+  try { kelas = JSON.parse(localStorage.getItem("kelasDiizinkan") || "[]"); } catch {}
+  try { nis   = JSON.parse(localStorage.getItem("nisDiizinkan")   || "[]"); } catch {}
+
+  if (!Array.isArray(kelas)) kelas = [];
+  if (!Array.isArray(nis)) nis = [];
+
+  const role = localStorage.getItem("role") || "user";
+
+  return { username, role, kelas, nis };
+}
+
   // === Load data santri ===
   async function loadDataSantri() {
     const kelas = kelasSelect.value;
