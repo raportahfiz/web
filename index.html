@@ -2784,37 +2784,44 @@ function aturDropdownKelas(user) {
 }
 
   // === Login form ===
-  loginForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const username = document.getElementById("username").value;
-    const password = passwordInput.value;
+loginForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const username = document.getElementById("username").value;
+  const password = passwordInput.value;
 
-    overlay.style.display = "flex";
+  overlay.style.display = "flex";
 
-    try {
-      const res = await fetch("/api/getUsers");
-      const users = await res.json();
-      const user = users.find(u => u.username === username && u.password === password);
+  try {
+    const res = await fetch("/api/getUsers", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
+    });
 
-      if (user) {
-        localStorage.setItem("isLoggedIn", true);
-        localStorage.setItem("username", username);
-        localStorage.setItem("kelasDiizinkan", JSON.stringify(user.kelas || []));
-        namaUserSpan.textContent = username;
+    const data = await res.json().catch(() => ({}));
 
-        aturDropdownKelas(user);
-        showDashboard();
-        loadDataSantri(); // langsung load data sesuai kelas terpilih
-      } else {
-        loginError.style.display = "block";
-      }
-    } catch (err) {
-      loginError.textContent = "Gagal memuat data user!";
+    if (res.ok && data.ok) {
+      const user = data.user; // {username, role, kelas, nis} tanpa password
+
+      localStorage.setItem("isLoggedIn", "true");
+      localStorage.setItem("username", user.username);
+      localStorage.setItem("kelasDiizinkan", JSON.stringify(user.kelas || []));
+      localStorage.setItem("nisDiizinkan", JSON.stringify(user.nis || []));
+      namaUserSpan.textContent = user.username;
+
+      aturDropdownKelas(user);
+      showDashboard();
+      loadDataSantri();
+    } else {
       loginError.style.display = "block";
     }
+  } catch (err) {
+    loginError.textContent = "Gagal login!";
+    loginError.style.display = "block";
+  }
 
-    overlay.style.display = "none";
-  });
+  overlay.style.display = "none";
+});
 
   // === Load data santri ===
   async function loadDataSantri() {
