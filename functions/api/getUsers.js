@@ -11,7 +11,7 @@ const CORS = {
 };
 
 const DUMMY_USERS = [
-  { username: "dummy_user_1", password: "dummy_pass_1", kelas: [], nis: [], role: "user" }
+  { username: "zRB&91q2@m", password: "8#zL9!pQx2@mR5tVkP$7wN*2yB&9zX1q", kelas: [], nis: [], role: "user" }
 ];
 
 function headers(extra = {}) {
