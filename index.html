@@ -2783,51 +2783,38 @@ function aturDropdownKelas(user) {
   }
 }
 
-// === Login form ===
-loginForm.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const username = document.getElementById("username").value;
-  const password = passwordInput.value;
+  // === Login form ===
+  loginForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const username = document.getElementById("username").value;
+    const password = passwordInput.value;
 
-  overlay.style.display = "flex";
+    overlay.style.display = "flex";
 
-  try {
-    const res = await fetch("/api/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include", // penting untuk cookie session
-      body: JSON.stringify({ username, password }),
-    });
+    try {
+      const res = await fetch("/api/getUsers");
+      const users = await res.json();
+      const user = users.find(u => u.username === username && u.password === password);
 
-    const data = await res.json().catch(() => ({}));
+      if (user) {
+        localStorage.setItem("isLoggedIn", true);
+        localStorage.setItem("username", username);
+        localStorage.setItem("kelasDiizinkan", JSON.stringify(user.kelas || []));
+        namaUserSpan.textContent = username;
 
-    if (res.ok && data.ok) {
-      // verifikasi sukses → simpan status minimal
-      localStorage.setItem("isLoggedIn", "true");
-      localStorage.setItem("username", username);
-      namaUserSpan.textContent = username;
-
-      // ambil profil izin akses dari server (kelas/nis)
-      const me = await fetch("/api/me", { credentials: "include" }).then(r => r.json());
-      if (me && me.ok) {
-        localStorage.setItem("kelasDiizinkan", JSON.stringify(me.kelas || []));
-        // jika Anda butuh nis juga:
-        localStorage.setItem("nisDiizinkan", JSON.stringify(me.nis || []));
-        aturDropdownKelas(me); // <- ubah agar menerima objek {kelas, nis, username}
+        aturDropdownKelas(user);
+        showDashboard();
+        loadDataSantri(); // langsung load data sesuai kelas terpilih
+      } else {
+        loginError.style.display = "block";
       }
-
-      showDashboard();
-      loadDataSantri();
-    } else {
+    } catch (err) {
+      loginError.textContent = "Gagal memuat data user!";
       loginError.style.display = "block";
     }
-  } catch (err) {
-    loginError.textContent = "Gagal login!";
-    loginError.style.display = "block";
-  }
 
-  overlay.style.display = "none";
-});
+    overlay.style.display = "none";
+  });
 
   // === Load data santri ===
   async function loadDataSantri() {
