@@ -1,16 +1,18 @@
 
 // Cloudflare Pages Functions
 // Endpoint: /api/getUsers
-// Mode:
-// - POST {username,password} -> cek ke user.json (GitHub private) -> return {ok:true,user:{...}} tanpa password
-// - Jika salah -> return {ok:false, users:[{dummy}]} (agar DevTools tetap lihat dummy)
-// - GET -> return dummy list (untuk kompatibilitas lama, kalau masih ada yang memanggil GET)
+// GET  -> dummy list (agar DevTools melihat palsu)
+// POST -> autentikasi server-side (cek user.json private), return user safe (tanpa password)
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type",
 };
+
+const DUMMY_USERS = [
+  { username: "dummy_user_1", password: "dummy_pass_1", kelas: [], nis: [], role: "user" }
+];
 
 function headers(extra = {}) {
   return {
@@ -22,9 +24,13 @@ function headers(extra = {}) {
   };
 }
 
-const DUMMY_USERS = [
-  { username: "dummy_user_1", password: "dummy_pass_1", kelas: [], nis: [] }
-];
+// helper: ambil array kelas dari berbagai nama field
+function getKelas(u) {
+  // admin Anda pakai akses_kelas, user lain pakai kelas
+  if (Array.isArray(u?.kelas)) return u.kelas;
+  if (Array.isArray(u?.akses_kelas)) return u.akses_kelas;
+  return [];
+}
 
 export async function onRequest({ request, env }) {
   const url = new URL(request.url);
@@ -32,17 +38,16 @@ export async function onRequest({ request, env }) {
   if (request.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: CORS });
   }
-
   if (url.pathname !== "/api/getUsers") {
     return new Response("Not Found", { status: 404, headers: CORS });
   }
 
-  // GET: selalu dummy (biar yang lihat Network dapat palsu)
+  // GET: selalu dummy supaya di Network terlihat palsu
   if (request.method === "GET") {
     return new Response(JSON.stringify(DUMMY_USERS), { status: 200, headers: headers() });
   }
 
-  // POST: cek kredensial secara server-side
+  // POST: autentikasi
   if (request.method !== "POST") {
     return new Response(JSON.stringify({ ok: false, error: "Use POST" }), { status: 405, headers: headers() });
   }
@@ -87,8 +92,6 @@ export async function onRequest({ request, env }) {
 
     if (!res.ok) {
       const msg = await res.text();
-      // Jangan bocorkan detail sensitif ke client (opsional).
-      // Tapi untuk debug, Anda bisa sementara tampilkan msg.
       return new Response(JSON.stringify({ ok: false, error: "GitHub API error", status: res.status, msg }), {
         status: 500,
         headers: headers(),
@@ -99,27 +102,25 @@ export async function onRequest({ request, env }) {
     const base64 = (data.content || "").replace(/\n/g, "");
     const jsonText = atob(base64);
 
-    let parsed = JSON.parse(jsonText);
+    const users = JSON.parse(jsonText); // sesuai user.json Anda: array
 
-    // Support 2 format:
-    // 1) [ {...}, {...} ]
-    // 2) { users: [ ... ] }
-    const users = Array.isArray(parsed) ? parsed : (Array.isArray(parsed.users) ? parsed.users : []);
-
-    const found = users.find(u => u && u.username === username && u.password === password);
+    const found = Array.isArray(users)
+      ? users.find(u => u && u.username === username && u.password === password)
+      : null;
 
     if (!found) {
-      // Salah -> tetap balas dummy agar DevTools lihat palsu
+      // salah login -> tetap balas dummy agar DevTools tidak dapat data asli
       return new Response(JSON.stringify({ ok: false, users: DUMMY_USERS }), {
         status: 401,
         headers: headers(),
       });
     }
 
-    // Benar -> balas profil user TANPA password
+    // aman: balas profil TANPA password
     const safeUser = {
       username: found.username,
-      kelas: Array.isArray(found.kelas) ? found.kelas : [],
+      role: found.role || "user",
+      kelas: getKelas(found),
       nis: Array.isArray(found.nis) ? found.nis : [],
     };
 
@@ -127,7 +128,6 @@ export async function onRequest({ request, env }) {
       status: 200,
       headers: headers(),
     });
-
   } catch (err) {
     return new Response(JSON.stringify({ ok: false, error: err.message }), {
       status: 500,
