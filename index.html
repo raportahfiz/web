@@ -2784,62 +2784,37 @@ function aturDropdownKelas(user) {
 }
 
   // === Login form ===
-loginForm.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const username = document.getElementById("username").value;
-  const password = passwordInput.value;
+  loginForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const username = document.getElementById("username").value;
+    const password = passwordInput.value;
 
-  overlay.style.display = "flex";
+    overlay.style.display = "flex";
 
-  try {
-    const res = await fetch("/api/getUsers", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password }),
-    });
+    try {
+      const res = await fetch("/api/getUsers");
+      const users = await res.json();
+      const user = users.find(u => u.username === username && u.password === password);
 
-    const data = await res.json().catch(() => ({}));
+      if (user) {
+        localStorage.setItem("isLoggedIn", true);
+        localStorage.setItem("username", username);
+        localStorage.setItem("kelasDiizinkan", JSON.stringify(user.kelas || []));
+        namaUserSpan.textContent = username;
 
-    if (res.ok && data.ok) {
-      const user = data.user; // {username, role, kelas, nis} tanpa password
-
-      localStorage.setItem("isLoggedIn", "true");
-      localStorage.setItem("username", user.username);
-      localStorage.setItem("kelasDiizinkan", JSON.stringify(user.kelas || []));
-      localStorage.setItem("nisDiizinkan", JSON.stringify(user.nis || []));
-      namaUserSpan.textContent = user.username;
-
-      aturDropdownKelas(user);
-      showDashboard();
-      loadDataSantri();
-    } else {
+        aturDropdownKelas(user);
+        showDashboard();
+        loadDataSantri(); // langsung load data sesuai kelas terpilih
+      } else {
+        loginError.style.display = "block";
+      }
+    } catch (err) {
+      loginError.textContent = "Gagal memuat data user!";
       loginError.style.display = "block";
     }
-  } catch (err) {
-    loginError.textContent = "Gagal login!";
-    loginError.style.display = "block";
-  }
 
-  overlay.style.display = "none";
-});
-
-	 
-function getUserLogin() {
-  const username = localStorage.getItem("username");
-  if (!username) return null;
-
-  let kelas = [];
-  let nis = [];
-  try { kelas = JSON.parse(localStorage.getItem("kelasDiizinkan") || "[]"); } catch {}
-  try { nis   = JSON.parse(localStorage.getItem("nisDiizinkan")   || "[]"); } catch {}
-
-  if (!Array.isArray(kelas)) kelas = [];
-  if (!Array.isArray(nis)) nis = [];
-
-  const role = localStorage.getItem("role") || "user";
-
-  return { username, role, kelas, nis };
-}
+    overlay.style.display = "none";
+  });
 
   // === Load data santri ===
   async function loadDataSantri() {
@@ -3714,56 +3689,22 @@ function callFillAyatOptions(selectEl, surahId, selectedAyat=""){
     await fetchGlobalUsageIndex(kelas);
     buildAyatIndexFromList(kelas, absensiData);
 
-    
-// === filter akses user (REVISI: tanpa GET /api/getUsers) ===
-const username = localStorage.getItem("username");
+    // filter akses user (tetap)
+    const username = localStorage.getItem("username");
+    const users = await fetch(`/api/getUsers?t=${Date.now()}`, {credentials:'include'}).then(r => r.json()).catch(()=>[]);
+    const user  = users.find(u => u.username === username);
 
-// Ambil izin akses dari localStorage (diset saat login sukses)
-let allowedKelas = [];
-let allowedNis = [];
-
-try {
-  allowedKelas = JSON.parse(localStorage.getItem("kelasDiizinkan") || "[]");
-} catch (_) {
-  allowedKelas = [];
-}
-
-try {
-  allowedNis = JSON.parse(localStorage.getItem("nisDiizinkan") || "[]");
-} catch (_) {
-  allowedNis = [];
-}
-
-// Normalisasi: pastikan array
-if (!Array.isArray(allowedKelas)) allowedKelas = [];
-if (!Array.isArray(allowedNis)) allowedNis = [];
-
-// Jika tidak ada username (belum login / storage kosong) -> kosongkan data
-if (!username) {
-  santriData = [];
-} else {
-  // Logika pembatasan sama seperti sebelumnya:
-  // - jika allowedKelas ada & berisi -> kelas harus termasuk
-  // - jika allowedNis ada & berisi -> filter NIS
-
-  if (allowedKelas.length) {
-    // Jika user punya pembatasan kelas tapi kelas saat ini tidak diizinkan -> kosong
-    if (!allowedKelas.includes(kelas)) {
+    if (user) {
+      if (user.kelas && user.kelas.length) {
+        if (!user.kelas.includes(kelas)) {
+          santriData = [];
+        } else if (user.nis && user.nis.length) {
+          santriData = santriData.filter(s => user.nis.includes(s.nis));
+        }
+      }
+    } else {
       santriData = [];
-    } else if (allowedNis.length) {
-      // Jika kelas diizinkan dan ada pembatasan NIS -> filter data santri
-      const setNis = new Set(allowedNis.map(String));
-      santriData = santriData.filter(s => setNis.has(String(s.nis)));
     }
-  } else {
-    // allowedKelas kosong => tidak membatasi kelas (boleh semua)
-    // namun kalau ada pembatasan NIS, tetap terapkan
-    if (allowedNis.length) {
-      const setNis = new Set(allowedNis.map(String));
-      santriData = santriData.filter(s => setNis.has(String(s.nis)));
-    }
-  }
-}
 
     const isModeNIS = !!(user && Array.isArray(user.nis) && user.nis.length);
     setButtonsDisabled(isModeNIS);
@@ -10945,21 +10886,15 @@ document.addEventListener("DOMContentLoaded", () => {
     const kelasEl = kelasSelectEl();
     const kelas   = kelasEl?.value || '';
 
-    
-// --- Ambil user login seperti dashboard (revisi) ---
-let user = null;
-try {
-  const username = localStorage.getItem("username");
-  if (username) {
-    const role = localStorage.getItem("role") || "user";
-    const kelas = JSON.parse(localStorage.getItem("kelasDiizinkan") || "[]");
-    const nis   = JSON.parse(localStorage.getItem("nisDiizinkan") || "[]");
-
-    user = { username, role, kelas, nis };
-  }
-} catch (e) {
-  console.warn("Ambil user dari localStorage gagal:", e);
-}
+    // --- Ambil user login seperti dashboard ---
+    let user = null;
+    try {
+      const username = localStorage.getItem('username'); // dashboard juga pakai ini
+      const users = await fetch(`/api/getUsers?t=${Date.now()}`).then(r=>r.json());
+      user = Array.isArray(users) ? users.find(u => u && u.username === username) : null;
+    } catch (e) {
+      console.warn('getUsers gagal:', e);
+    }
 
     // === Jika user NIS -> tampilkan 1 opsi (nis pertama) ===
     if (user && Array.isArray(user.nis) && user.nis.length) {
