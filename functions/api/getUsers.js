@@ -1,39 +1,37 @@
-
-// Cloudflare Pages Functions
-// Endpoint: /api/getUsers
-// GET  -> dummy list (agar DevTools melihat palsu)
-// POST -> autentikasi server-side (cek user.json private), return user safe (tanpa password)
-
+// Cloudflare Pages Functions (bukan Node). Endpoint: /api/getUsers
 const CORS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type",
 };
 
-const DUMMY_USERS = [
-  { username: "zRB&91q2@m", password: "8#zL9!pQx2@mR5tVkP$7wN*2yB&9zX1q", kelas: [], nis: [], role: "user" }
-];
-
-function headers(extra = {}) {
-  return {
-    ...CORS,
-    "Content-Type": "application/json",
-    "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
-    "Pragma": "no-cache",
-    ...extra,
-  };
-}
-
-// helper: ambil array kelas dari berbagai nama field
-function getKelas(u) {
-  // admin Anda pakai akses_kelas, user lain pakai kelas
-  if (Array.isArray(u?.kelas)) return u.kelas;
-  if (Array.isArray(u?.akses_kelas)) return u.akses_kelas;
-  return [];
-}
-
 export async function onRequest({ request, env }) {
   const url = new URL(request.url);
+  if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
+  if (url.pathname !== "/api/getUsers") return new Response("Not Found", { status: 404, headers: CORS });
+
+  const githubApiUrl = "https://api.github.com/repos/raportahfiz/server/contents/user.json";
+  try {
+    const res = await fetch(githubApiUrl, {
+      headers: {
+        Authorization: `Bearer ${env.GITHUB_TOKEN}`, // set di Pages → Settings → Environment variables
+        Accept: "application/vnd.github.v3+json",
+        "User-Agent": "cf-pages-functions"
+      }
+    });
+    if (!res.ok) {
+      const msg = await res.text();
+      return new Response(JSON.stringify({ error: "GitHub API error", status: res.status, msg }),
+        { status: 500, headers: { "Content-Type": "application/json", ...CORS } });
+    }
+    const data = await res.json();           // { content: "base64", ... }
+    const jsonText = atob(data.content);     // decode base64 → string JSON
+    return new Response(jsonText, { status: 200, headers: { "Content-Type": "application/json", ...CORS } });
+  } catch (err) {
+    return new Response(JSON.stringify({ error: err.message }),
+      { status: 500, headers: { "Content-Type": "application/json", ...CORS } });
+  }
+}
 
   if (request.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: CORS });
